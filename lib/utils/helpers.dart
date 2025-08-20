@@ -1,3 +1,4 @@
+// lib/utils/helpers.dart
 import 'package:flutter/material.dart';
 
 class Helpers {
@@ -29,6 +30,25 @@ class Helpers {
       case 'cancelled':
       case 'dibatalkan':
         return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  static Color getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'jalan':
+        return Colors.blue;
+      case 'jembatan':
+        return Colors.brown;
+      case 'marka':
+        return Colors.orange;
+      case 'rambu':
+        return Colors.red;
+      case 'drainase':
+        return Colors.teal;
+      case 'penerangan':
+        return Colors.amber;
       default:
         return Colors.grey;
     }
@@ -89,4 +109,4 @@ class Helpers {
         return 'Tidak Diketahui';
     }
   }
-} 
+}

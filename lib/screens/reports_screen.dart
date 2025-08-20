@@ -1,6 +1,12 @@
+// lib/screens/reports_screen.dart
 import 'package:flutter/material.dart';
 import '../widgets/enhanced_card.dart';
+import '../services/local_storage_service.dart';
+import '../model/temuan.dart';
+import '../model/perbaikan.dart';
+import '../utils/theme.dart';
 import '../utils/helpers.dart';
+import '../utils/date_formatter.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -10,102 +16,297 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
+  final LocalStorageService _storageService = LocalStorageService();
+  
   String _selectedPeriod = 'bulan';
   bool _isLoading = false;
+  
+  List<Temuan> _temuanList = [];
+  List<Perbaikan> _perbaikanList = [];
+  Map<String, int> _statistics = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReportsData();
+  }
+
+  Future<void> _loadReportsData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final temuanList = await _storageService.getAllTemuan();
+      final perbaikanList = await _storageService.getAllPerbaikan();
+      final stats = await _storageService.getSummaryStatistics();
+
+      setState(() {
+        _temuanList = temuanList;
+        _perbaikanList = perbaikanList;
+        _statistics = stats;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<Temuan> get _filteredTemuan {
+    final now = DateTime.now();
+    return _temuanList.where((temuan) {
+      switch (_selectedPeriod) {
+        case 'minggu':
+          return temuan.createdAt.isAfter(now.subtract(const Duration(days: 7)));
+        case 'bulan':
+          return temuan.createdAt.isAfter(now.subtract(const Duration(days: 30)));
+        case 'tahun':
+          return temuan.createdAt.isAfter(now.subtract(const Duration(days: 365)));
+        default:
+          return true;
+      }
+    }).toList();
+  }
+
+  List<Perbaikan> get _filteredPerbaikan {
+    final now = DateTime.now();
+    return _perbaikanList.where((perbaikan) {
+      switch (_selectedPeriod) {
+        case 'minggu':
+          return perbaikan.createdAt.isAfter(now.subtract(const Duration(days: 7)));
+        case 'bulan':
+          return perbaikan.createdAt.isAfter(now.subtract(const Duration(days: 30)));
+        case 'tahun':
+          return perbaikan.createdAt.isAfter(now.subtract(const Duration(days: 365)));
+        default:
+          return true;
+      }
+    }).toList();
+  }
+
+  Map<String, int> get _categoryData {
+    final Map<String, int> categoryCount = {};
+    for (final temuan in _filteredTemuan) {
+      categoryCount[temuan.category] = (categoryCount[temuan.category] ?? 0) + 1;
+    }
+    return categoryCount;
+  }
+
+  Map<String, int> get _statusData {
+    final Map<String, int> statusCount = {};
+    for (final temuan in _filteredTemuan) {
+      statusCount[temuan.status] = (statusCount[temuan.status] ?? 0) + 1;
+    }
+    return statusCount;
+  }
+
+  Map<String, int> get _priorityData {
+    final Map<String, int> priorityCount = {};
+    for (final temuan in _filteredTemuan) {
+      priorityCount[temuan.priority] = (priorityCount[temuan.priority] ?? 0) + 1;
+    }
+    return priorityCount;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: const Text('Laporan'),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: AppTheme.surfaceColor,
         actions: [
           PopupMenuButton<String>(
+            icon: const Icon(Icons.filter_list),
             onSelected: (value) {
               setState(() {
                 _selectedPeriod = value;
               });
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'minggu',
-                child: Text('Minggu Ini'),
+                child: Row(
+                  children: [
+                    if (_selectedPeriod == 'minggu')
+                      Icon(Icons.check, size: 16, color: AppTheme.primaryColor)
+                    else
+                      const SizedBox(width: 16),
+                    const SizedBox(width: AppTheme.spacing8),
+                    const Text('Minggu Ini'),
+                  ],
+                ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'bulan',
-                child: Text('Bulan Ini'),
+                child: Row(
+                  children: [
+                    if (_selectedPeriod == 'bulan')
+                      Icon(Icons.check, size: 16, color: AppTheme.primaryColor)
+                    else
+                      const SizedBox(width: 16),
+                    const SizedBox(width: AppTheme.spacing8),
+                    const Text('Bulan Ini'),
+                  ],
+                ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'tahun',
-                child: Text('Tahun Ini'),
+                child: Row(
+                  children: [
+                    if (_selectedPeriod == 'tahun')
+                      Icon(Icons.check, size: 16, color: AppTheme.primaryColor)
+                    else
+                      const SizedBox(width: 16),
+                    const SizedBox(width: AppTheme.spacing8),
+                    const Text('Tahun Ini'),
+                  ],
+                ),
               ),
             ],
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(_getPeriodText(_selectedPeriod)),
-                  const Icon(Icons.arrow_drop_down),
-                ],
-              ),
-            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadReportsData,
           ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSummaryCards(),
-                  const SizedBox(height: 24),
-                  _buildCategoryChart(),
-                  const SizedBox(height: 24),
-                  _buildStatusChart(),
-                  const SizedBox(height: 24),
-                  _buildPriorityChart(),
-                  const SizedBox(height: 24),
-                  _buildRecentActivity(),
-                ],
+          : RefreshIndicator(
+              onRefresh: _loadReportsData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(AppTheme.spacing20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Period Header
+                    _buildPeriodHeader(),
+                    const SizedBox(height: AppTheme.spacing24),
+
+                    // Summary Cards
+                    _buildSummaryCards(),
+                    const SizedBox(height: AppTheme.spacing24),
+
+                    // Category Chart
+                    _buildCategoryChart(),
+                    const SizedBox(height: AppTheme.spacing24),
+
+                    // Status Chart
+                    _buildStatusChart(),
+                    const SizedBox(height: AppTheme.spacing24),
+
+                    // Priority Chart
+                    _buildPriorityChart(),
+                    const SizedBox(height: AppTheme.spacing24),
+
+                    // Recent Activity
+                    _buildRecentActivity(),
+                  ],
+                ),
               ),
             ),
     );
   }
 
+  Widget _buildPeriodHeader() {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spacing20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryColor,
+            AppTheme.primaryLight,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppTheme.radius16),
+        boxShadow: AppTheme.shadowLg,
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppTheme.spacing12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(AppTheme.radius12),
+            ),
+            child: const Icon(
+              Icons.analytics,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: AppTheme.spacing16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Laporan ${_getPeriodText(_selectedPeriod)}',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacing4),
+                Text(
+                  'Data monitoring periode ${_selectedPeriod}',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSummaryCards() {
+    final filteredTemuanCount = _filteredTemuan.length;
+    final filteredPerbaikanCount = _filteredPerbaikan.length;
+    final completedTemuan = _filteredTemuan.where((t) => t.status == 'completed').length;
+    final ongoingPerbaikan = _filteredPerbaikan.where((p) => p.status == 'ongoing').length;
+
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.5,
+      crossAxisSpacing: AppTheme.spacing16,
+      mainAxisSpacing: AppTheme.spacing16,
+      childAspectRatio: 1.3,
       children: [
         _buildSummaryCard(
           'Total Temuan',
-          '156',
+          filteredTemuanCount.toString(),
           Icons.search,
-          Colors.blue,
+          AppTheme.warningColor,
         ),
         _buildSummaryCard(
           'Temuan Selesai',
-          '142',
+          completedTemuan.toString(),
           Icons.check_circle,
-          Colors.green,
+          AppTheme.successColor,
         ),
         _buildSummaryCard(
-          'Dalam Proses',
-          '8',
+          'Total Perbaikan',
+          filteredPerbaikanCount.toString(),
+          Icons.build,
+          AppTheme.primaryColor,
+        ),
+        _buildSummaryCard(
+          'Perbaikan Ongoing',
+          ongoingPerbaikan.toString(),
           Icons.pending,
-          Colors.orange,
-        ),
-        _buildSummaryCard(
-          'Menunggu',
-          '6',
-          Icons.schedule,
-          Colors.red,
+          AppTheme.infoColor,
         ),
       ],
     );
@@ -113,30 +314,36 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _buildSummaryCard(String title, String value, IconData icon, Color color) {
     return EnhancedCard(
-      padding: const EdgeInsets.all(12),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 28,
-            color: color,
+          Container(
+            padding: const EdgeInsets.all(AppTheme.spacing12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(AppTheme.radius12),
+            ),
+            child: Icon(
+              icon,
+              size: 24,
+              color: color,
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppTheme.spacing12),
           Text(
             value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: color,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: AppTheme.spacing4),
           Text(
             title,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.grey[600],
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
+              fontWeight: FontWeight.w500,
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -149,50 +356,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _buildCategoryChart() {
     return EnhancedCard(
-      padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Temuan berdasarkan Kategori',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildCategoryItem('Jalan', 45, Colors.blue),
-            _buildCategoryItem('Jembatan', 23, Colors.green),
-            _buildCategoryItem('Marka', 18, Colors.orange),
-            _buildCategoryItem('Rambu', 15, Colors.purple),
-            _buildCategoryItem('Drainase', 12, Colors.teal),
-            _buildCategoryItem('Penerangan', 8, Colors.indigo),
-          ],
-        ),
-      );
-  }
-
-  Widget _buildCategoryItem(String category, int count, Color color) {
-    final percentage = (count / 121 * 100).round();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
+          Text(
+            'Temuan berdasarkan Kategori',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(category),
-          ),
-          Text(
-            '$count ($percentage%)',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
+          const SizedBox(height: AppTheme.spacing16),
+          if (_categoryData.isEmpty) 
+            _buildEmptyChart('Tidak ada data kategori untuk periode ini')
+          else
+            ..._categoryData.entries.map((entry) => _buildCategoryItem(
+              _getCategoryText(entry.key),
+              entry.value,
+              Helpers.getCategoryColor(entry.key),
+            )).toList(),
         ],
       ),
     );
@@ -200,47 +382,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _buildStatusChart() {
     return EnhancedCard(
-      padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Status Temuan',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildStatusItem('Selesai', 142, Helpers.getStatusColor('completed')),
-            _buildStatusItem('Dalam Proses', 8, Helpers.getStatusColor('in_progress')),
-            _buildStatusItem('Menunggu', 6, Helpers.getStatusColor('pending')),
-          ],
-        ),
-      );
-  }
-
-  Widget _buildStatusItem(String status, int count, Color color) {
-    final percentage = (count / 156 * 100).round();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
+          Text(
+            'Status Temuan',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(status),
-          ),
-          Text(
-            '$count ($percentage%)',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
+          const SizedBox(height: AppTheme.spacing16),
+          if (_statusData.isEmpty)
+            _buildEmptyChart('Tidak ada data status untuk periode ini')
+          else
+            ..._statusData.entries.map((entry) => _buildStatusItem(
+              Helpers.getStatusText(entry.key),
+              entry.value,
+              Helpers.getStatusColor(entry.key),
+            )).toList(),
         ],
       ),
     );
@@ -248,30 +408,59 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _buildPriorityChart() {
     return EnhancedCard(
-      padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Prioritas Temuan',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Prioritas Temuan',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
             ),
-            const SizedBox(height: 16),
-            _buildPriorityItem('Kritis', 12, Helpers.getPriorityColor('critical')),
-            _buildPriorityItem('Tinggi', 34, Helpers.getPriorityColor('high')),
-            _buildPriorityItem('Sedang', 67, Helpers.getPriorityColor('medium')),
-            _buildPriorityItem('Rendah', 43, Helpers.getPriorityColor('low')),
-          ],
-        ),
-      );
+          ),
+          const SizedBox(height: AppTheme.spacing16),
+          if (_priorityData.isEmpty)
+            _buildEmptyChart('Tidak ada data prioritas untuk periode ini')
+          else
+            ..._priorityData.entries.map((entry) => _buildPriorityItem(
+              Helpers.getPriorityText(entry.key),
+              entry.value,
+              Helpers.getPriorityColor(entry.key),
+            )).toList(),
+        ],
+      ),
+    );
   }
 
-  Widget _buildPriorityItem(String priority, int count, Color color) {
-    final percentage = (count / 156 * 100).round();
+  Widget _buildEmptyChart(String message) {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spacing24),
+      child: Column(
+        children: [
+          Icon(
+            Icons.bar_chart_outlined,
+            size: 48,
+            color: AppTheme.textTertiary,
+          ),
+          const SizedBox(height: AppTheme.spacing12),
+          Text(
+            message,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryItem(String category, int count, Color color) {
+    final total = _filteredTemuan.length;
+    final percentage = total > 0 ? (count / total * 100).round() : 0;
+    
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing8),
       child: Row(
         children: [
           Container(
@@ -282,13 +471,95 @@ class _ReportsScreenState extends State<ReportsScreen> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppTheme.spacing12),
           Expanded(
-            child: Text(priority),
+            child: Text(
+              category,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
           Text(
             '$count ($percentage%)',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusItem(String status, int count, Color color) {
+    final total = _filteredTemuan.length;
+    final percentage = total > 0 ? (count / total * 100).round() : 0;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing8),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: AppTheme.spacing12),
+          Expanded(
+            child: Text(
+              status,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Text(
+            '$count ($percentage%)',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriorityItem(String priority, int count, Color color) {
+    final total = _filteredTemuan.length;
+    final percentage = total > 0 ? (count / total * 100).round() : 0;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing8),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: AppTheme.spacing12),
+          Expanded(
+            child: Text(
+              priority,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Text(
+            '$count ($percentage%)',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
           ),
         ],
       ),
@@ -296,61 +567,94 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildRecentActivity() {
+    final recentItems = <Map<String, dynamic>>[];
+    
+    // Add recent temuan
+    for (final temuan in _filteredTemuan.take(3)) {
+      recentItems.add({
+        'type': 'temuan',
+        'title': 'Temuan: ${temuan.description}',
+        'description': 'KM ${temuan.kmPoint} • ${temuan.section}',
+        'time': DateFormatter.formatRelativeTime(temuan.createdAt),
+        'icon': Icons.search,
+        'color': Helpers.getStatusColor(temuan.status),
+        'status': Helpers.getStatusText(temuan.status),
+      });
+    }
+    
+    // Add recent perbaikan
+    for (final perbaikan in _filteredPerbaikan.take(3)) {
+      recentItems.add({
+        'type': 'perbaikan',
+        'title': 'Perbaikan: ${perbaikan.workDescription}',
+        'description': 'KM ${perbaikan.kmPoint} • ${perbaikan.assignedTo}',
+        'time': DateFormatter.formatRelativeTime(perbaikan.createdAt),
+        'icon': Icons.build,
+        'color': Helpers.getStatusColor(perbaikan.status),
+        'status': Helpers.getStatusText(perbaikan.status),
+      });
+    }
+    
+    // Sort by most recent
+    recentItems.sort((a, b) => b['time'].toString().compareTo(a['time'].toString()));
+
     return EnhancedCard(
-      padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Aktivitas Terbaru',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Aktivitas Terbaru',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            _buildActivityItem(
-              'Temuan baru dilaporkan',
-              'Lubang di KM 12+300',
-              '2 jam yang lalu',
-              Icons.add_circle,
-              Colors.blue,
-            ),
-            _buildActivityItem(
-              'Perbaikan selesai',
-              'Pengecatan marka di KM 8+200',
-              '4 jam yang lalu',
-              Icons.check_circle,
-              Colors.green,
-            ),
-            _buildActivityItem(
-              'Status diupdate',
-              'Perbaikan jembatan dimulai',
-              '6 jam yang lalu',
-              Icons.update,
-              Colors.orange,
-            ),
-            _buildActivityItem(
-              'Temuan baru dilaporkan',
-              'Rambu rusak di KM 15+500',
-              '1 hari yang lalu',
-              Icons.add_circle,
-              Colors.blue,
-            ),
-          ],
-        ),
-      );
+              if (recentItems.isNotEmpty)
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/history');
+                  },
+                  child: const Text('Lihat Semua'),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spacing16),
+          if (recentItems.isEmpty)
+            _buildEmptyChart('Tidak ada aktivitas untuk periode ini')
+          else
+            ...recentItems.take(5).map((item) => _buildActivityItem(
+              item['title'],
+              item['description'],
+              item['time'],
+              item['icon'],
+              item['color'],
+              item['status'],
+            )).toList(),
+        ],
+      ),
+    );
   }
 
-  Widget _buildActivityItem(String title, String description, String time, IconData icon, Color color) {
+  Widget _buildActivityItem(
+    String title,
+    String description,
+    String time,
+    IconData icon,
+    Color color,
+    String status,
+  ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing8),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(AppTheme.spacing8),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppTheme.radius8),
             ),
             child: Icon(
               icon,
@@ -358,31 +662,60 @@ class _ReportsScreenState extends State<ReportsScreen> {
               size: 20,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppTheme.spacing12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: AppTheme.spacing2),
                 Text(
                   description,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textSecondary,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          Text(
-            time,
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 12,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spacing8,
+                  vertical: AppTheme.spacing4,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(AppTheme.radius8),
+                ),
+                child: Text(
+                  status,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppTheme.spacing4),
+              Text(
+                time,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textTertiary,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -401,4 +734,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
         return 'Bulan Ini';
     }
   }
-} 
+
+  String _getCategoryText(String category) {
+    switch (category) {
+      case 'jalan':
+        return 'Jalan';
+      case 'jembatan':
+        return 'Jembatan';
+      case 'marka':
+        return 'Marka';
+      case 'rambu':
+        return 'Rambu';
+      case 'drainase':
+        return 'Drainase';
+      case 'penerangan':
+        return 'Penerangan';
+      default:
+        return category;
+    }
+  }
+}
