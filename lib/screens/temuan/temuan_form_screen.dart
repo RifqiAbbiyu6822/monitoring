@@ -1,16 +1,10 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
-import '../../model/temuan.dart';
+import '../../widgets/form_components.dart';
+import '../../utils/theme.dart';
+import '../../utils/validators.dart';
 
 class TemuanFormScreen extends StatefulWidget {
-  final String category;
-  final String subcategory;
-
-  const TemuanFormScreen({
-    super.key,
-    required this.category,
-    required this.subcategory,
-  });
+  const TemuanFormScreen({super.key});
 
   @override
   State<TemuanFormScreen> createState() => _TemuanFormScreenState();
@@ -19,318 +13,348 @@ class TemuanFormScreen extends StatefulWidget {
 class _TemuanFormScreenState extends State<TemuanFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
-  final _kmController = TextEditingController();
-  final _laneController = TextEditingController();
-  
-  String? _selectedPriority = 'Medium';
+  final _kmPointController = TextEditingController();
+  final _notesController = TextEditingController();
+
+  String? _selectedCategory;
+  String? _selectedSubcategory;
   String? _selectedSection;
   String? _selectedLane;
-  List<File> _photos = [];
-  Map<String, double>? _location;
-  
-  final List<String> _priorities = ['Low', 'Medium', 'High', 'Critical'];
-  final List<String> _sections = [
-    'Section 1 (KM 0+000 - KM 5+000)',
-    'Section 2 (KM 5+000 - KM 10+000)',
-    'Section 3 (KM 10+000 - KM 15+000)',
-    'Section 4 (KM 15+000 - KM 20+000)',
-  ];
-  
-  final List<String> _lanes = [
-    'Bahu Luar',
-    'Bahu Dalam',
-    'Lajur 1',
-    'Lajur 2',
-    'Lajur 3',
-    'Median',
-  ];
+  String? _selectedPriority;
+  DateTime? _selectedDate;
+
+  final List<String> _categories = ['jalan', 'jembatan', 'marka', 'rambu', 'drainase', 'penerangan'];
+  final List<String> _sections = ['A', 'B', 'C', 'D'];
+  final List<String> _lanes = ['Lajur 1', 'Lajur 2', 'Lajur 3', 'Lajur 4', 'Bahul', 'Bahu Kanan'];
+  final List<String> _priorities = ['low', 'medium', 'high', 'critical'];
+
+  Map<String, List<String>> _subcategories = {
+    'jalan': ['lubang', 'retak', 'aus', 'amblas'],
+    'jembatan': ['kerusakan', 'korosi', 'retak', 'kebocoran'],
+    'marka': ['faded', 'rusak', 'hilang', 'tidak_terlihat'],
+    'rambu': ['rusak', 'hilang', 'terbalik', 'tertutup'],
+    'drainase': ['tersumbat', 'rusak', 'bocor', 'tidak_ada'],
+    'penerangan': ['mati', 'redup', 'rusak', 'tidak_ada'],
+  };
 
   @override
   void dispose() {
     _descriptionController.dispose();
-    _kmController.dispose();
-    _laneController.dispose();
+    _kmPointController.dispose();
+    _notesController.dispose();
     super.dispose();
+  }
+
+  void _onCategoryChanged(String? category) {
+    setState(() {
+      _selectedCategory = category;
+      _selectedSubcategory = null;
+    });
+  }
+
+  void _onSubmit() {
+    if (_formKey.currentState!.validate()) {
+      // Handle form submission
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Temuan berhasil disimpan'),
+          backgroundColor: AppTheme.successColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radius12),
+          ),
+        ),
+      );
+      Navigator.pop(context);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text('Form Temuan'),
+        title: const Text('Temuan Baru'),
         centerTitle: true,
+        elevation: 0,
+        backgroundColor: AppTheme.surfaceColor,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           TextButton(
-            onPressed: _resetForm,
-            child: const Text('Reset'),
+            onPressed: _onSubmit,
+            child: const Text('Simpan'),
           ),
         ],
       ),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppTheme.spacing20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Category Info
+              // Header Section
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppTheme.spacing20),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppTheme.surfaceColor,
+                  borderRadius: BorderRadius.circular(AppTheme.radius16),
+                  border: Border.all(color: AppTheme.borderColor),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.category, color: Colors.blue.shade700),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Kategori:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(widget.category),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.subdirectory_arrow_right, 
-                            color: Colors.blue.shade700),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Sub-kategori:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(widget.subcategory)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Section Selection
-              _buildSectionTitle('Lokasi'),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _selectedSection,
-                decoration: InputDecoration(
-                  labelText: 'Pilih Section',
-                  prefixIcon: const Icon(Icons.map),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                items: _sections.map((section) {
-                  return DropdownMenuItem(
-                    value: section,
-                    child: Text(section, style: const TextStyle(fontSize: 14)),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedSection = value;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Pilih section';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-
-              // KM Point
-              TextFormField(
-                controller: _kmController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'KM Point (contoh: 12+300)',
-                  prefixIcon: const Icon(Icons.location_on),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Masukkan KM point';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-
-              // Lane Selection
-              DropdownButtonFormField<String>(
-                value: _selectedLane,
-                decoration: InputDecoration(
-                  labelText: 'Pilih Lajur/Bahu',
-                  prefixIcon: const Icon(Icons.directions_car),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                items: _lanes.map((lane) {
-                  return DropdownMenuItem(
-                    value: lane,
-                    child: Text(lane),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedLane = value;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Pilih lajur/bahu';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-
-              // GPS Location
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.location_on, color: Colors.grey.shade600),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Lokasi GPS akan diambil otomatis',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Description
-              _buildSectionTitle('Deskripsi Temuan'),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _descriptionController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  labelText: 'Deskripsi detail temuan',
-                  alignLabelWithHint: true,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  hintText: 'Jelaskan kondisi temuan secara detail...',
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Masukkan deskripsi temuan';
-                  }
-                  if (value.length < 20) {
-                    return 'Deskripsi minimal 20 karakter';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-
-              // Priority
-              _buildSectionTitle('Prioritas'),
-              const SizedBox(height: 12),
-              Row(
-                children: _priorities.map((priority) {
-                  Color getColor() {
-                    switch (priority) {
-                      case 'Low':
-                        return Colors.green;
-                      case 'Medium':
-                        return Colors.yellow.shade700;
-                      case 'High':
-                        return Colors.orange;
-                      case 'Critical':
-                        return Colors.red;
-                      default:
-                        return Colors.grey;
-                    }
-                  }
-
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: ChoiceChip(
-                        label: Text(
-                          priority,
-                          style: TextStyle(
-                            color: _selectedPriority == priority
-                                ? Colors.white
-                                : getColor(),
-                            fontSize: 12,
+                        Container(
+                          padding: const EdgeInsets.all(AppTheme.spacing12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(AppTheme.radius12),
+                          ),
+                          child: Icon(
+                            Icons.add_circle_outline,
+                            color: AppTheme.primaryColor,
+                            size: 24,
                           ),
                         ),
-                        selected: _selectedPriority == priority,
-                        selectedColor: getColor(),
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedPriority = priority;
-                          });
-                        },
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 20),
-
-              // Photo Section
-              _buildSectionTitle('Dokumentasi Foto'),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    Icon(Icons.camera_alt, color: Colors.grey.shade600, size: 48),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Fitur foto akan segera hadir',
-                      style: TextStyle(color: Colors.grey),
+                        const SizedBox(width: AppTheme.spacing16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Laporkan Temuan',
+                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  color: AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: AppTheme.spacing4),
+                              Text(
+                                'Isi form di bawah untuk melaporkan temuan baru',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: AppTheme.spacing24),
+
+              // Form Sections
+              FormSection(
+                title: 'Informasi Lokasi',
+                subtitle: 'Detail lokasi temuan',
+                children: [
+                  EnhancedDropdownField<String>(
+                    label: 'Kategori',
+                    hint: 'Pilih kategori',
+                    value: _selectedCategory,
+                    items: _categories,
+                    itemText: (category) => _getCategoryText(category),
+                    onChanged: _onCategoryChanged,
+                    prefixIcon: const Icon(Icons.category),
+                    validator: (value) {
+                      if (value == null) return 'Kategori harus dipilih';
+                      return null;
+                    },
+                  ),
+                  if (_selectedCategory != null)
+                    EnhancedDropdownField<String>(
+                      label: 'Sub Kategori',
+                      hint: 'Pilih sub kategori',
+                      value: _selectedSubcategory,
+                      items: _subcategories[_selectedCategory!] ?? [],
+                      itemText: (subcategory) => _getSubcategoryText(subcategory),
+                      onChanged: (value) => setState(() => _selectedSubcategory = value),
+                      prefixIcon: const Icon(Icons.subdirectory_arrow_right),
+                      validator: (value) {
+                        if (value == null) return 'Sub kategori harus dipilih';
+                        return null;
+                      },
+                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: EnhancedDropdownField<String>(
+                          label: 'Seksi',
+                          hint: 'Pilih seksi',
+                          value: _selectedSection,
+                          items: _sections,
+                          itemText: (section) => section,
+                          onChanged: (value) => setState(() => _selectedSection = value),
+                          prefixIcon: const Icon(Icons.map),
+                          validator: (value) {
+                            if (value == null) return 'Seksi harus dipilih';
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: AppTheme.spacing16),
+                      Expanded(
+                        child: EnhancedDropdownField<String>(
+                          label: 'Lajur',
+                          hint: 'Pilih lajur',
+                          value: _selectedLane,
+                          items: _lanes,
+                          itemText: (lane) => lane,
+                          onChanged: (value) => setState(() => _selectedLane = value),
+                          prefixIcon: const Icon(Icons.directions_car),
+                          validator: (value) {
+                            if (value == null) return 'Lajur harus dipilih';
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                                     EnhancedTextField(
+                     label: 'KM Point',
+                     hint: 'Contoh: 12+300',
+                     controller: _kmPointController,
+                     prefixIcon: const Icon(Icons.location_on),
+                     validator: (value) {
+                       if (value == null || value.isEmpty) {
+                         return 'KM Point harus diisi';
+                       }
+                       return null;
+                     },
+                   ),
+                ],
+              ),
+
+              FormSection(
+                title: 'Detail Temuan',
+                subtitle: 'Deskripsi dan prioritas temuan',
+                children: [
+                                     EnhancedTextField(
+                     label: 'Deskripsi',
+                     hint: 'Jelaskan detail temuan',
+                     controller: _descriptionController,
+                     maxLines: 3,
+                     prefixIcon: const Icon(Icons.description),
+                     validator: (value) {
+                       if (value == null || value.isEmpty) {
+                         return 'Deskripsi harus diisi';
+                       }
+                       if (value.length < 10) {
+                         return 'Deskripsi minimal 10 karakter';
+                       }
+                       return null;
+                     },
+                   ),
+                  EnhancedDropdownField<String>(
+                    label: 'Prioritas',
+                    hint: 'Pilih prioritas',
+                    value: _selectedPriority,
+                    items: _priorities,
+                    itemText: (priority) => _getPriorityText(priority),
+                    onChanged: (value) => setState(() => _selectedPriority = value),
+                    prefixIcon: const Icon(Icons.priority_high),
+                    validator: (value) {
+                      if (value == null) return 'Prioritas harus dipilih';
+                      return null;
+                    },
+                  ),
+                  EnhancedDateField(
+                    label: 'Tanggal Temuan',
+                    selectedDate: _selectedDate,
+                    onDateSelected: (date) => setState(() => _selectedDate = date),
+                    validator: (date) {
+                      if (date == null) return 'Tanggal harus dipilih';
+                      return null;
+                    },
+                  ),
+                  EnhancedTextField(
+                    label: 'Catatan Tambahan',
+                    hint: 'Catatan tambahan (opsional)',
+                    controller: _notesController,
+                    maxLines: 2,
+                    prefixIcon: const Icon(Icons.note),
+                  ),
+                ],
+              ),
+
+              // Photo Section
+              FormSection(
+                title: 'Foto Bukti',
+                subtitle: 'Ambil foto untuk bukti temuan',
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppTheme.spacing20),
+                    decoration: BoxDecoration(
+                      color: AppTheme.backgroundColor,
+                      borderRadius: BorderRadius.circular(AppTheme.radius12),
+                      border: Border.all(color: AppTheme.borderColor, style: BorderStyle.solid),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.camera_alt_outlined,
+                          size: 48,
+                          color: AppTheme.textTertiary,
+                        ),
+                        const SizedBox(height: AppTheme.spacing12),
+                        Text(
+                          'Ambil Foto',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: AppTheme.spacing8),
+                        Text(
+                          'Foto akan membantu tim perbaikan memahami kondisi temuan',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: AppTheme.spacing16),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            // Handle photo capture
+                          },
+                          icon: const Icon(Icons.camera_alt),
+                          label: const Text('Ambil Foto'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: AppTheme.spacing32),
 
               // Submit Button
               SizedBox(
                 width: double.infinity,
-                height: 50,
                 child: ElevatedButton(
-                  onPressed: _submitForm,
+                  onPressed: _onSubmit,
                   style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppTheme.radius12),
                     ),
                   ),
                   child: const Text(
                     'Simpan Temuan',
-                    style: TextStyle(fontSize: 16),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -338,117 +362,80 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-      ),
-    );
+  String _getCategoryText(String category) {
+    switch (category) {
+      case 'jalan':
+        return 'Jalan';
+      case 'jembatan':
+        return 'Jembatan';
+      case 'marka':
+        return 'Marka Jalan';
+      case 'rambu':
+        return 'Rambu Lalu Lintas';
+      case 'drainase':
+        return 'Drainase';
+      case 'penerangan':
+        return 'Penerangan Jalan';
+      default:
+        return category;
+    }
   }
 
-  void _resetForm() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset Form'),
-        content: const Text('Apakah Anda yakin ingin mereset form ini?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {
-                _formKey.currentState?.reset();
-                _descriptionController.clear();
-                _kmController.clear();
-                _laneController.clear();
-                _selectedPriority = 'Medium';
-                _selectedSection = null;
-                _selectedLane = null;
-                _photos.clear();
-                _location = null;
-              });
-            },
-            child: const Text('Reset'),
-          ),
-        ],
-      ),
-    );
+  String _getSubcategoryText(String subcategory) {
+    switch (subcategory) {
+      case 'lubang':
+        return 'Lubang';
+      case 'retak':
+        return 'Retak';
+      case 'aus':
+        return 'Aus';
+      case 'amblas':
+        return 'Amblas';
+      case 'kerusakan':
+        return 'Kerusakan';
+      case 'korosi':
+        return 'Korosi';
+      case 'kebocoran':
+        return 'Kebocoran';
+      case 'faded':
+        return 'Memudar';
+      case 'rusak':
+        return 'Rusak';
+      case 'hilang':
+        return 'Hilang';
+      case 'tidak_terlihat':
+        return 'Tidak Terlihat';
+      case 'terbalik':
+        return 'Terbalik';
+      case 'tertutup':
+        return 'Tertutup';
+      case 'tersumbat':
+        return 'Tersumbat';
+      case 'bocor':
+        return 'Bocor';
+      case 'tidak_ada':
+        return 'Tidak Ada';
+      case 'mati':
+        return 'Mati';
+      case 'redup':
+        return 'Redup';
+      default:
+        return subcategory;
+    }
   }
 
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      if (_photos.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tambahkan minimal 1 foto dokumentasi'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      if (_location == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tentukan lokasi GPS'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      // Create Temuan object
-      final temuan = Temuan(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        category: widget.category,
-        subcategory: widget.subcategory,
-        section: _selectedSection!,
-        kmPoint: _kmController.text,
-        lane: _selectedLane!,
-        description: _descriptionController.text,
-        priority: _selectedPriority!,
-        status: 'Pending',
-        latitude: _location!['latitude']!,
-        longitude: _location!['longitude']!,
-        photos: _photos.map((e) => e.path).toList(),
-        createdAt: DateTime.now(),
-        createdBy: 'Petugas 001', // This should come from user session
-      );
-
-      // Show success dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
-          title: const Text('Berhasil'),
-          content: Text(
-            'Temuan ${widget.subcategory} berhasil disimpan dengan ID: ${temuan.id}',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Close dialog
-                Navigator.pop(context); // Back to category selection
-              },
-              child: const Text('Selesai'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context); // Close dialog
-                _resetForm(); // Reset form for new entry
-              },
-              child: const Text('Buat Temuan Baru'),
-            ),
-          ],
-        ),
-      );
+  String _getPriorityText(String priority) {
+    switch (priority) {
+      case 'low':
+        return 'Rendah';
+      case 'medium':
+        return 'Sedang';
+      case 'high':
+        return 'Tinggi';
+      case 'critical':
+        return 'Kritis';
+      default:
+        return priority;
     }
   }
 }

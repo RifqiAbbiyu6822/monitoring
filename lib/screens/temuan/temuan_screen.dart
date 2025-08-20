@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'temuan_form_screen.dart';
 import '../../model/temuan_category.dart';
+import '../../utils/theme.dart';
 
 class TemuanScreen extends StatefulWidget {
   const TemuanScreen({super.key});
@@ -231,28 +232,49 @@ class _TemuanScreenState extends State<TemuanScreen> {
   }
 
   Widget _buildTemuanListTab() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.list_alt,
-            size: 64,
-            color: Colors.grey,
-          ),
-          SizedBox(height: 16),
-          Text(
-            'Daftar Temuan',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+          Container(
+            padding: const EdgeInsets.all(AppTheme.spacing24),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor,
+              borderRadius: BorderRadius.circular(AppTheme.radius20),
+              border: Border.all(color: AppTheme.borderColor),
+              boxShadow: AppTheme.shadowSm,
             ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Fitur ini akan segera hadir',
-            style: TextStyle(
-              color: Colors.grey,
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppTheme.spacing16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.radius16),
+                  ),
+                  child: Icon(
+                    Icons.list_alt,
+                    size: 48,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacing16),
+                Text(
+                  'Daftar Temuan',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacing8),
+                Text(
+                  'Fitur ini akan segera hadir',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
         ],
@@ -264,8 +286,9 @@ class _TemuanScreenState extends State<TemuanScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: AppTheme.surfaceColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radius20)),
       ),
       builder: (context) {
         return DraggableScrollableSheet(
@@ -277,23 +300,23 @@ class _TemuanScreenState extends State<TemuanScreen> {
             return Column(
               children: [
                 Container(
-                  margin: const EdgeInsets.only(top: 8),
+                  margin: const EdgeInsets.only(top: AppTheme.spacing8),
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: AppTheme.textTertiary,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppTheme.spacing20),
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(AppTheme.spacing12),
                         decoration: BoxDecoration(
                           color: category.color.withOpacity(0.1),
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(AppTheme.radius12),
                         ),
                         child: Icon(
                           category.icon,
@@ -301,12 +324,12 @@ class _TemuanScreenState extends State<TemuanScreen> {
                           size: 24,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppTheme.spacing16),
                       Text(
                         category.name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -320,27 +343,43 @@ class _TemuanScreenState extends State<TemuanScreen> {
                     itemBuilder: (context, index) {
                       final subcategory = category.subcategories[index];
                       return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: category.color.withOpacity(0.1),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacing20,
+                          vertical: AppTheme.spacing8,
+                        ),
+                        leading: Container(
+                          padding: const EdgeInsets.all(AppTheme.spacing8),
+                          decoration: BoxDecoration(
+                            color: category.color.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(AppTheme.radius8),
+                          ),
                           child: Text(
                             '${index + 1}',
                             style: TextStyle(
                               color: category.color,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
                             ),
                           ),
                         ),
-                        title: Text(subcategory),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        title: Text(
+                          subcategory,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                          color: AppTheme.textTertiary,
+                        ),
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => TemuanFormScreen(
-                                category: category.name,
-                                subcategory: subcategory,
-                              ),
+                              builder: (context) => const TemuanFormScreen(),
                             ),
                           );
                         },

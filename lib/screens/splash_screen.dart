@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../main.dart';
+import '../utils/theme.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -103,9 +104,9 @@ class _SplashScreenState extends State<SplashScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.blue.shade600,
-              Colors.blue.shade400,
-              Colors.blue.shade300,
+              AppTheme.primaryColor,
+              AppTheme.primaryLight,
+              AppTheme.primaryColor.withOpacity(0.8),
             ],
           ),
         ),

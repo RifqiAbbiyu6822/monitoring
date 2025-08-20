@@ -4,6 +4,7 @@ import '../widgets/summary_card.dart';
 import '../widgets/enhanced_card.dart';
 import '../widgets/animated_loading.dart';
 import '../models/summary_data.dart';
+import '../utils/theme.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,10 +26,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text('Monitoring Jalan Tol MBZ'),
+        title: const Text('Dashboard'),
         centerTitle: true,
-        elevation: 2,
+        elevation: 0,
+        backgroundColor: AppTheme.surfaceColor,
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
@@ -51,95 +54,199 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppTheme.spacing20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Welcome Section
-              GradientCard(
-                colors: [Colors.blue.shade600, Colors.blue.shade400, Colors.blue.shade300],
-                padding: const EdgeInsets.all(20),
-                margin: const EdgeInsets.only(bottom: 20),
+              Container(
+                padding: const EdgeInsets.all(AppTheme.spacing24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppTheme.primaryColor,
+                      AppTheme.primaryLight,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(AppTheme.radius20),
+                  boxShadow: AppTheme.shadowLg,
+                ),
                 child: Row(
                   children: [
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Selamat Datang',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: Colors.white.withOpacity(0.9),
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: AppTheme.spacing4),
                           Text(
                             'Petugas Monitoring',
-                            style: TextStyle(
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                               color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: AppTheme.spacing8),
                           Text(
                             '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontSize: 14,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white.withOpacity(0.8),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Icon(
-                      Icons.engineering,
-                      size: 60,
-                      color: Colors.white.withValues(alpha: 0.8),
+                    Container(
+                      padding: const EdgeInsets.all(AppTheme.spacing12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(AppTheme.radius16),
+                      ),
+                      child: Icon(
+                        Icons.engineering,
+                        size: 48,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
               ),
 
               // Summary Section
-              const Text(
+              Text(
                 'Ringkasan',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppTheme.spacing16),
               Row(
                 children: [
                   Expanded(
-                    child: EnhancedCard(
-                      margin: const EdgeInsets.only(right: 6),
-                      child: SummaryCard(
-                        title: 'Total Temuan',
-                        value: summaryData.totalTemuan.toString(),
-                        icon: Icons.search,
-                        color: Colors.orange,
-                        subtitle: '${summaryData.temuanPending} Pending',
+                    child: Container(
+                      margin: const EdgeInsets.only(right: AppTheme.spacing8),
+                      padding: const EdgeInsets.all(AppTheme.spacing20),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceColor,
+                        borderRadius: BorderRadius.circular(AppTheme.radius16),
+                        border: Border.all(color: AppTheme.borderColor),
+                        boxShadow: AppTheme.shadowSm,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(AppTheme.spacing8),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.warningColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(AppTheme.radius8),
+                                ),
+                                child: Icon(
+                                  Icons.search,
+                                  color: AppTheme.warningColor,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: AppTheme.spacing12),
+                              Expanded(
+                                child: Text(
+                                  'Total Temuan',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppTheme.spacing12),
+                          Text(
+                            summaryData.totalTemuan.toString(),
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                              color: AppTheme.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: AppTheme.spacing4),
+                          Text(
+                            '${summaryData.temuanPending} Pending',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                   Expanded(
-                    child: EnhancedCard(
-                      margin: const EdgeInsets.only(left: 6),
-                      child: SummaryCard(
-                        title: 'Total Perbaikan',
-                        value: summaryData.totalPerbaikan.toString(),
-                        icon: Icons.build,
-                        color: Colors.green,
-                        subtitle: '${summaryData.perbaikanOngoing} Ongoing',
+                    child: Container(
+                      margin: const EdgeInsets.only(left: AppTheme.spacing8),
+                      padding: const EdgeInsets.all(AppTheme.spacing20),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceColor,
+                        borderRadius: BorderRadius.circular(AppTheme.radius16),
+                        border: Border.all(color: AppTheme.borderColor),
+                        boxShadow: AppTheme.shadowSm,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(AppTheme.spacing8),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.successColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(AppTheme.radius8),
+                                ),
+                                child: Icon(
+                                  Icons.build,
+                                  color: AppTheme.successColor,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: AppTheme.spacing12),
+                              Expanded(
+                                child: Text(
+                                  'Total Perbaikan',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppTheme.spacing12),
+                          Text(
+                            summaryData.totalPerbaikan.toString(),
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                              color: AppTheme.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: AppTheme.spacing4),
+                          Text(
+                            '${summaryData.perbaikanOngoing} Ongoing',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppTheme.spacing32),
 
               // Quick Actions
               const Text(
