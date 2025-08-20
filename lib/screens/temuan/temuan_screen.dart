@@ -25,50 +25,19 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
 
   final List<String> _filterOptions = ['Semua', 'Pending', 'In Progress', 'Completed'];
 
-  final List<TemuanCategory> categories = [
-    TemuanCategory(
-      id: '1',
+  // Enhanced category configurations
+  final Map<String, CategoryConfig> _categoryConfigs = {
+    'jalan': CategoryConfig(
       name: 'Jalan',
       icon: Icons.directions_car,
       color: Colors.blue,
-      subcategories: ['Lubang', 'Retak', 'Aus', 'Amblas'],
+      subcategories: ['Lubang', 'Retak', 'Aus', 'Amblas', 'Gelombang'],
+      showKmPoint: true,
+      showLane: false,
+      showSection: true,
+      description: 'Kondisi lampu penerangan jalan',
     ),
-    TemuanCategory(
-      id: '2',
-      name: 'Jembatan',
-      icon: Icons.architecture,
-      color: Colors.brown,
-      subcategories: ['Kerusakan', 'Korosi', 'Retak', 'Kebocoran'],
-    ),
-    TemuanCategory(
-      id: '3',
-      name: 'Marka Jalan',
-      icon: Icons.straighten,
-      color: Colors.orange,
-      subcategories: ['Memudar', 'Rusak', 'Hilang', 'Tidak Terlihat'],
-    ),
-    TemuanCategory(
-      id: '4',
-      name: 'Rambu',
-      icon: Icons.traffic,
-      color: Colors.red,
-      subcategories: ['Rusak', 'Hilang', 'Terbalik', 'Tertutup'],
-    ),
-    TemuanCategory(
-      id: '5',
-      name: 'Drainase',
-      icon: Icons.water_drop,
-      color: Colors.teal,
-      subcategories: ['Tersumbat', 'Rusak', 'Bocor', 'Tidak Ada'],
-    ),
-    TemuanCategory(
-      id: '6',
-      name: 'Penerangan',
-      icon: Icons.lightbulb,
-      color: Colors.yellow.shade700,
-      subcategories: ['Mati', 'Redup', 'Rusak', 'Tidak Ada'],
-    ),
-  ];
+  };
 
   @override
   void initState() {
@@ -182,31 +151,59 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Info banner
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing20),
             decoration: BoxDecoration(
-              color: AppTheme.infoColor.withOpacity(0.1),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppTheme.infoColor.withOpacity(0.1),
+                  AppTheme.primaryColor.withOpacity(0.05),
+                ],
+              ),
               borderRadius: BorderRadius.circular(AppTheme.radius16),
-              border: Border.all(color: AppTheme.infoColor.withOpacity(0.3)),
+              border: Border.all(color: AppTheme.infoColor.withOpacity(0.2)),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, color: AppTheme.infoColor),
+                Container(
+                  padding: const EdgeInsets.all(AppTheme.spacing8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.infoColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.radius8),
+                  ),
+                  child: Icon(Icons.info_outline, color: AppTheme.infoColor),
+                ),
                 const SizedBox(width: AppTheme.spacing12),
                 Expanded(
-                  child: Text(
-                    'Pilih kategori temuan untuk melanjutkan pelaporan',
-                    style: TextStyle(
-                      color: AppTheme.infoColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pilih Kategori Temuan',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppTheme.infoColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: AppTheme.spacing4),
+                      Text(
+                        'Pilih kategori sesuai jenis temuan untuk melanjutkan pelaporan',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: AppTheme.spacing24),
+
+          // Categories grid
           Text(
             'Kategori Temuan',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -222,12 +219,13 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
               crossAxisCount: 2,
               crossAxisSpacing: AppTheme.spacing16,
               mainAxisSpacing: AppTheme.spacing16,
-              childAspectRatio: 1.1,
+              childAspectRatio: 1.0,
             ),
-            itemCount: categories.length,
+            itemCount: _categoryConfigs.length,
             itemBuilder: (context, index) {
-              final category = categories[index];
-              return _buildCategoryCard(category);
+              final categoryKey = _categoryConfigs.keys.elementAt(index);
+              final config = _categoryConfigs[categoryKey]!;
+              return _buildCategoryCard(categoryKey, config);
             },
           ),
         ],
@@ -235,7 +233,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
     );
   }
 
-  Widget _buildCategoryCard(TemuanCategory category) {
+  Widget _buildCategoryCard(String categoryKey, CategoryConfig config) {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
@@ -246,29 +244,28 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _showSubcategoryDialog(category),
+          onTap: () => _navigateToTemuanForm(preselectedCategory: categoryKey),
           borderRadius: BorderRadius.circular(AppTheme.radius16),
           child: Padding(
             padding: const EdgeInsets.all(AppTheme.spacing16),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(AppTheme.spacing12),
+                  padding: const EdgeInsets.all(AppTheme.spacing16),
                   decoration: BoxDecoration(
-                    color: category.color.withOpacity(0.1),
+                    color: config.color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radius12),
                   ),
                   child: Icon(
-                    category.icon,
-                    size: 28,
-                    color: category.color,
+                    config.icon,
+                    size: 32,
+                    color: config.color,
                   ),
                 ),
                 const SizedBox(height: AppTheme.spacing12),
                 Text(
-                  category.name,
+                  config.name,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: AppTheme.textPrimary,
                     fontWeight: FontWeight.w600,
@@ -279,13 +276,29 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                 ),
                 const SizedBox(height: AppTheme.spacing4),
                 Text(
-                  '${category.subcategories.length} sub-kategori',
+                  '${config.subcategories.length} jenis',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppTheme.textSecondary,
                   ),
                   textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppTheme.spacing8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.spacing8,
+                    vertical: AppTheme.spacing4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: config.color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.radius8),
+                  ),
+                  child: Text(
+                    'Laporkan',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: config.color,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -320,10 +333,21 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  Text(
-                    '${_filteredTemuanList.length} item',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textSecondary,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacing12,
+                      vertical: AppTheme.spacing4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppTheme.radius8),
+                    ),
+                    child: Text(
+                      '${_filteredTemuanList.length} item',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -334,10 +358,12 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                 child: Row(
                   children: _filterOptions.map((filter) {
                     final isSelected = _selectedFilter == filter;
+                    final count = _getFilterCount(filter);
+                    
                     return Container(
                       margin: const EdgeInsets.only(right: AppTheme.spacing8),
                       child: FilterChip(
-                        label: Text(filter),
+                        label: Text('$filter ($count)'),
                         selected: isSelected,
                         onSelected: (selected) {
                           setState(() {
@@ -384,6 +410,22 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
         ),
       ],
     );
+  }
+
+  int _getFilterCount(String filter) {
+    if (filter == 'Semua') return _temuanList.length;
+    return _temuanList.where((t) {
+      switch (filter) {
+        case 'Pending':
+          return t.status == 'pending';
+        case 'In Progress':
+          return t.status == 'in_progress';
+        case 'Completed':
+          return t.status == 'completed';
+        default:
+          return false;
+      }
+    }).length;
   }
 
   Widget _buildEmptyState() {
@@ -434,6 +476,69 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                 const SizedBox(height: AppTheme.spacing20),
                 ElevatedButton.icon(
                   onPressed: () {
+                Navigator.pop(context);
+                _deleteTemuan(temuan.id);
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.errorColor,
+              ),
+              child: const Text('Hapus'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteTemuan(String temuanId) async {
+    try {
+      await _storageService.deleteTemuan(temuanId);
+      _showSuccessSnackBar('Temuan berhasil dihapus');
+      _loadTemuanData();
+    } catch (e) {
+      _showErrorSnackBar('Gagal menghapus temuan');
+    }
+  }
+
+  void _navigateToTemuanForm({String? temuanId, String? preselectedCategory}) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TemuanFormScreen(
+          temuanId: temuanId,
+          preselectedCategory: preselectedCategory,
+        ),
+      ),
+    );
+
+    if (result == true) {
+      _loadTemuanData();
+    }
+  }
+}
+
+// Enhanced Category configuration class
+class CategoryConfig {
+  final String name;
+  final IconData icon;
+  final Color color;
+  final List<String> subcategories;
+  final bool showKmPoint;
+  final bool showLane;
+  final bool showSection;
+  final String description;
+
+  CategoryConfig({
+    required this.name,
+    required this.icon,
+    required this.color,
+    required this.subcategories,
+    this.showKmPoint = true,
+    this.showLane = true,
+    this.showSection = true,
+    required this.description,
+  });
+}
                     _tabController.animateTo(0);
                   },
                   icon: const Icon(Icons.add),
@@ -448,6 +553,8 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
   }
 
   Widget _buildTemuanCard(Temuan temuan) {
+    final categoryConfig = _categoryConfigs[temuan.category];
+    
     return Container(
       margin: const EdgeInsets.only(bottom: AppTheme.spacing16),
       decoration: BoxDecoration(
@@ -471,12 +578,12 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                     Container(
                       padding: const EdgeInsets.all(AppTheme.spacing8),
                       decoration: BoxDecoration(
-                        color: Helpers.getStatusColor(temuan.status).withOpacity(0.1),
+                        color: (categoryConfig?.color ?? Helpers.getStatusColor(temuan.status)).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(AppTheme.radius8),
                       ),
                       child: Icon(
-                        Helpers.getCategoryIcon(temuan.category),
-                        color: Helpers.getStatusColor(temuan.status),
+                        categoryConfig?.icon ?? Helpers.getCategoryIcon(temuan.category),
+                        color: categoryConfig?.color ?? Helpers.getStatusColor(temuan.status),
                         size: 20,
                       ),
                     ),
@@ -496,7 +603,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                           ),
                           const SizedBox(height: AppTheme.spacing4),
                           Text(
-                            'KM ${temuan.kmPoint} • ${temuan.section} • ${temuan.createdBy}',
+                            'KM ${temuan.kmPoint} • ${temuan.section} • ${categoryConfig?.name ?? temuan.category}',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: AppTheme.textSecondary,
                             ),
@@ -589,115 +696,9 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
     );
   }
 
-  void _showSubcategoryDialog(TemuanCategory category) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppTheme.surfaceColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radius20)),
-      ),
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          minChildSize: 0.3,
-          maxChildSize: 0.8,
-          expand: false,
-          builder: (context, scrollController) {
-            return Column(
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(top: AppTheme.spacing8),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppTheme.textTertiary,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(AppTheme.spacing20),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(AppTheme.spacing12),
-                        decoration: BoxDecoration(
-                          color: category.color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(AppTheme.radius12),
-                        ),
-                        child: Icon(
-                          category.icon,
-                          color: category.color,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: AppTheme.spacing16),
-                      Text(
-                        category.name,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: AppTheme.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: ListView.builder(
-                    controller: scrollController,
-                    itemCount: category.subcategories.length,
-                    itemBuilder: (context, index) {
-                      final subcategory = category.subcategories[index];
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppTheme.spacing20,
-                          vertical: AppTheme.spacing8,
-                        ),
-                        leading: Container(
-                          padding: const EdgeInsets.all(AppTheme.spacing8),
-                          decoration: BoxDecoration(
-                            color: category.color.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(AppTheme.radius8),
-                          ),
-                          child: Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              color: category.color,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          subcategory,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppTheme.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        trailing: Icon(
-                          Icons.arrow_forward_ios,
-                          size: 16,
-                          color: AppTheme.textTertiary,
-                        ),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _navigateToTemuanForm();
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   void _showTemuanDetail(Temuan temuan) {
+    final categoryConfig = _categoryConfigs[temuan.category];
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -725,12 +726,12 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                         Container(
                           padding: const EdgeInsets.all(AppTheme.spacing12),
                           decoration: BoxDecoration(
-                            color: Helpers.getStatusColor(temuan.status).withOpacity(0.1),
+                            color: (categoryConfig?.color ?? Helpers.getStatusColor(temuan.status)).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(AppTheme.radius12),
                           ),
                           child: Icon(
-                            Helpers.getCategoryIcon(temuan.category),
-                            color: Helpers.getStatusColor(temuan.status),
+                            categoryConfig?.icon ?? Helpers.getCategoryIcon(temuan.category),
+                            color: categoryConfig?.color ?? Helpers.getStatusColor(temuan.status),
                             size: 24,
                           ),
                         ),
@@ -748,8 +749,8 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                               ),
                               const SizedBox(height: AppTheme.spacing4),
                               Text(
-                                'ID: ${temuan.id}',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                categoryConfig?.name ?? temuan.category,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   color: AppTheme.textSecondary,
                                 ),
                               ),
@@ -809,14 +810,15 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                     // Information sections
                     _buildDetailSection('Deskripsi', [
                       _buildDetailItem('Deskripsi', temuan.description, isDescription: true),
-                      _buildDetailItem('Kategori', '${temuan.category} - ${temuan.subcategory}'),
+                      _buildDetailItem('Kategori', '${categoryConfig?.name ?? temuan.category} - ${temuan.subcategory}'),
                     ]),
                     const SizedBox(height: AppTheme.spacing20),
 
                     _buildDetailSection('Lokasi', [
                       _buildDetailItem('Seksi', temuan.section),
                       _buildDetailItem('KM Point', temuan.kmPoint),
-                      _buildDetailItem('Lajur', temuan.lane),
+                      if (temuan.lane != 'N/A')
+                        _buildDetailItem('Lajur', temuan.lane),
                       if (temuan.latitude != 0.0 || temuan.longitude != 0.0)
                         _buildDetailItem('Koordinat', '${temuan.latitude}, ${temuan.longitude}'),
                     ]),
@@ -852,6 +854,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                             onPressed: () {
                               Navigator.pop(context);
                               // Navigate to create perbaikan with this temuan
+                              Navigator.pushNamed(context, '/perbaikan');
                             },
                             icon: const Icon(Icons.build),
                             label: const Text('Buat Perbaikan'),
@@ -952,40 +955,54 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
-                _deleteTemuan(temuan.id);
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.errorColor,
-              ),
-              child: const Text('Hapus'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _deleteTemuan(String temuanId) async {
-    try {
-      await _storageService.deleteTemuan(temuanId);
-      _showSuccessSnackBar('Temuan berhasil dihapus');
-      _loadTemuanData();
-    } catch (e) {
-      _showErrorSnackBar('Gagal menghapus temuan');
-    }
-  }
-
-  void _navigateToTemuanForm({String? temuanId}) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => TemuanFormScreen(temuanId: temuanId),
-      ),
-    );
-
-    if (result == true) {
-      _loadTemuanData();
-    }
-  }
-}
+                
+      showLane: true,
+      showSection: true,
+      description: 'Kerusakan pada permukaan jalan',
+    ),
+    'jembatan': CategoryConfig(
+      name: 'Jembatan',
+      icon: Icons.architecture,
+      color: Colors.brown,
+      subcategories: ['Kerusakan Struktur', 'Korosi', 'Retak Beton', 'Kebocoran', 'Joint Rusak'],
+      showKmPoint: true,
+      showLane: false,
+      showSection: true,
+      description: 'Kerusakan pada struktur jembatan',
+    ),
+    'marka': CategoryConfig(
+      name: 'Marka Jalan',
+      icon: Icons.straighten,
+      color: Colors.orange,
+      subcategories: ['Memudar', 'Rusak', 'Hilang', 'Tidak Terlihat', 'Salah Posisi'],
+      showKmPoint: true,
+      showLane: true,
+      showSection: true,
+      description: 'Kondisi marka dan garis jalan',
+    ),
+    'rambu': CategoryConfig(
+      name: 'Rambu',
+      icon: Icons.traffic,
+      color: Colors.red,
+      subcategories: ['Rusak', 'Hilang', 'Terbalik', 'Tertutup', 'Pudar'],
+      showKmPoint: true,
+      showLane: false,
+      showSection: true,
+      description: 'Kondisi rambu lalu lintas',
+    ),
+    'drainase': CategoryConfig(
+      name: 'Drainase',
+      icon: Icons.water_drop,
+      color: Colors.teal,
+      subcategories: ['Tersumbat', 'Rusak', 'Bocor', 'Tidak Ada', 'Dangkal'],
+      showKmPoint: true,
+      showLane: false,
+      showSection: true,
+      description: 'Kondisi sistem drainase',
+    ),
+    'penerangan': CategoryConfig(
+      name: 'Penerangan',
+      icon: Icons.lightbulb,
+      color: Colors.amber.shade700,
+      subcategories: ['Mati', 'Redup', 'Rusak', 'Tidak Ada', 'Berkedip'],
+      showKmPoint: true,
