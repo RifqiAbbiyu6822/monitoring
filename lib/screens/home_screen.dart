@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/menu_card.dart';
-import '../widgets/summary_card.dart';
 import '../widgets/enhanced_card.dart';
-import '../widgets/animated_loading.dart';
 import '../models/summary_data.dart';
 import '../utils/theme.dart';
 
