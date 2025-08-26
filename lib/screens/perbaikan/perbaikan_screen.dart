@@ -1080,126 +1080,126 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
           builder: (context, setState) {
             return AlertDialog(
               title: const Text('Update Progress'),
-              content: SizedBox(
-                width: double.maxFinite,
-                height: MediaQuery.of(context).size.height * 0.6,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Progress: ${currentProgress.toInt()}%',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: AppTheme.spacing8),
-                    Slider(
-                      value: currentProgress,
-                      min: 0,
-                      max: 100,
-                      divisions: 100,
-                      label: '${currentProgress.toInt()}%',
-                      onChanged: (value) {
-                        setState(() {
-                          currentProgress = value;
-                          // Auto update status based on progress
-                          if (value == 0) {
-                            currentStatus = 'pending';
-                          } else if (value > 0 && value < 100) {
-                            currentStatus = 'ongoing';
-                          } else if (value == 100) {
-                            currentStatus = 'selesai';
-                          }
-                        });
-                      },
-                    ),
-                    const SizedBox(height: AppTheme.spacing16),
-                    DropdownButtonFormField<String>(
-                      value: currentStatus,
-                      decoration: const InputDecoration(
-                        labelText: 'Status',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'pending', child: Text('Pending')),
-                        DropdownMenuItem(value: 'ongoing', child: Text('Ongoing')),
-                        DropdownMenuItem(value: 'selesai', child: Text('Selesai')),
-                        DropdownMenuItem(value: 'cancelled', child: Text('Cancelled')),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          currentStatus = value!;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: AppTheme.spacing16),
-                    TextField(
-                      controller: notesController,
-                      decoration: const InputDecoration(
-                        labelText: 'Catatan Update (Opsional)',
-                        border: OutlineInputBorder(),
-                        hintText: 'Tambahkan catatan progress...',
-                      ),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: AppTheme.spacing16),
-                    // Foto Dokumentasi Section
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(AppTheme.spacing16),
-                        decoration: BoxDecoration(
-                          color: AppTheme.backgroundColor,
-                          borderRadius: BorderRadius.circular(AppTheme.radius12),
-                          border: Border.all(color: AppTheme.borderColor),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.photo_library,
-                                  color: AppTheme.primaryColor,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: AppTheme.spacing8),
-                                Text(
-                                  'Foto Dokumentasi Progress',
-                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: AppTheme.spacing8),
-                            Text(
-                              'Tambahkan foto untuk dokumentasi progress (${progressPhotos.length}/5)',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: AppTheme.spacing12),
-                            Expanded(
-                              child: PhotoPickerWidget(
-                                initialPhotos: progressPhotos,
-                                onPhotosChanged: (photos) {
-                                  setState(() {
-                                    progressPhotos = photos;
-                                  });
-                                },
-                                maxPhotos: 5,
-                                title: 'Foto Dokumentasi',
-                                subtitle: 'Foto untuk dokumentasi progress',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                             content: SizedBox(
+                 width: double.maxFinite,
+                 height: MediaQuery.of(context).size.height * 0.7,
+                 child: Column(
+                   mainAxisSize: MainAxisSize.min,
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     Text(
+                       'Progress: ${currentProgress.toInt()}%',
+                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                         fontWeight: FontWeight.w600,
+                       ),
+                     ),
+                     const SizedBox(height: AppTheme.spacing8),
+                     Slider(
+                       value: currentProgress,
+                       min: 0,
+                       max: 100,
+                       divisions: 100,
+                       label: '${currentProgress.toInt()}%',
+                       onChanged: (value) {
+                         setState(() {
+                           currentProgress = value;
+                           // Auto update status based on progress
+                           if (value == 0) {
+                             currentStatus = 'pending';
+                           } else if (value > 0 && value < 100) {
+                             currentStatus = 'ongoing';
+                           } else if (value == 100) {
+                             currentStatus = 'selesai';
+                           }
+                         });
+                       },
+                     ),
+                     const SizedBox(height: AppTheme.spacing16),
+                     DropdownButtonFormField<String>(
+                       value: currentStatus,
+                       decoration: const InputDecoration(
+                         labelText: 'Status',
+                         border: OutlineInputBorder(),
+                       ),
+                       items: const [
+                         DropdownMenuItem(value: 'pending', child: Text('Pending')),
+                         DropdownMenuItem(value: 'ongoing', child: Text('Ongoing')),
+                         DropdownMenuItem(value: 'selesai', child: Text('Selesai')),
+                         DropdownMenuItem(value: 'cancelled', child: Text('Cancelled')),
+                       ],
+                       onChanged: (value) {
+                         setState(() {
+                           currentStatus = value!;
+                         });
+                       },
+                     ),
+                     const SizedBox(height: AppTheme.spacing16),
+                     TextField(
+                       controller: notesController,
+                       decoration: const InputDecoration(
+                         labelText: 'Catatan Update (Opsional)',
+                         border: OutlineInputBorder(),
+                         hintText: 'Tambahkan catatan progress...',
+                       ),
+                       maxLines: 2,
+                     ),
+                     const SizedBox(height: AppTheme.spacing16),
+                     // Foto Dokumentasi Section
+                     Expanded(
+                       child: Container(
+                         padding: const EdgeInsets.all(AppTheme.spacing16),
+                         decoration: BoxDecoration(
+                           color: AppTheme.backgroundColor,
+                           borderRadius: BorderRadius.circular(AppTheme.radius12),
+                           border: Border.all(color: AppTheme.borderColor),
+                         ),
+                         child: Column(
+                           crossAxisAlignment: CrossAxisAlignment.start,
+                           children: [
+                             Row(
+                               children: [
+                                 Icon(
+                                   Icons.photo_library,
+                                   color: AppTheme.primaryColor,
+                                   size: 20,
+                                 ),
+                                 const SizedBox(width: AppTheme.spacing8),
+                                 Text(
+                                   'Foto Dokumentasi Progress',
+                                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                     fontWeight: FontWeight.w600,
+                                   ),
+                                 ),
+                               ],
+                             ),
+                             const SizedBox(height: AppTheme.spacing8),
+                             Text(
+                               'Tambahkan foto untuk dokumentasi progress (${progressPhotos.length}/5)',
+                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                 color: AppTheme.textSecondary,
+                               ),
+                             ),
+                             const SizedBox(height: AppTheme.spacing12),
+                             Expanded(
+                               child: PhotoPickerWidget(
+                                 initialPhotos: progressPhotos,
+                                 onPhotosChanged: (photos) {
+                                   setState(() {
+                                     progressPhotos = photos;
+                                   });
+                                 },
+                                 maxPhotos: 5,
+                                 title: 'Foto Dokumentasi',
+                                 subtitle: 'Foto untuk dokumentasi progress',
+                               ),
+                             ),
+                           ],
+                         ),
+                       ),
+                     ),
+                   ],
+                 ),
+               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),

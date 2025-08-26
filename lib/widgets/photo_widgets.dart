@@ -32,7 +32,10 @@ class PhotoGridWidget extends StatelessWidget {
       children: [
         if (photos.isEmpty) ...[
           Container(
-            height: 200,
+            constraints: const BoxConstraints(
+              minHeight: 120,
+              maxHeight: 200,
+            ),
             width: double.infinity,
             decoration: BoxDecoration(
               color: AppTheme.backgroundColor,
@@ -44,26 +47,27 @@ class PhotoGridWidget extends StatelessWidget {
               children: [
                 Icon(
                   Icons.photo_library_outlined,
-                  size: 48,
+                  size: 32,
                   color: AppTheme.textTertiary,
                 ),
-                const SizedBox(height: AppTheme.spacing12),
+                const SizedBox(height: AppTheme.spacing8),
                 Text(
                   emptyMessage,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppTheme.textSecondary,
                   ),
+                  textAlign: TextAlign.center,
                 ),
                 if (canEdit && onAddPhoto != null) ...[
-                  const SizedBox(height: AppTheme.spacing16),
+                  const SizedBox(height: AppTheme.spacing12),
                   ElevatedButton.icon(
                     onPressed: onAddPhoto,
-                    icon: const Icon(Icons.add_a_photo, size: 20),
+                    icon: const Icon(Icons.add_a_photo, size: 16),
                     label: const Text('Tambah Foto'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: AppTheme.spacing20,
-                        vertical: AppTheme.spacing12,
+                        horizontal: AppTheme.spacing16,
+                        vertical: AppTheme.spacing8,
                       ),
                     ),
                   ),
