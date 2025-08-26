@@ -1,11 +1,13 @@
 // lib/screens/database_management_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:cross_file/cross_file.dart';
 import '../services/local_storage_service.dart';
 import '../utils/theme.dart';
 import '../widgets/enhanced_card.dart';
@@ -53,14 +55,16 @@ class _DatabaseManagementScreenState extends State<DatabaseManagementScreen> {
     });
 
     try {
-      // Request storage permission
-      var status = await Permission.storage.request();
-      if (!status.isGranted) {
-        _showErrorSnackBar('Izin akses penyimpanan diperlukan');
-        setState(() {
-          _isLoading = false;
-        });
-        return;
+      // Request storage permission for Android
+      if (Platform.isAndroid) {
+        var status = await Permission.storage.request();
+        if (!status.isGranted) {
+          _showErrorSnackBar('Izin akses penyimpanan diperlukan');
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
       }
 
       // Export data
@@ -69,17 +73,13 @@ class _DatabaseManagementScreenState extends State<DatabaseManagementScreen> {
       // Convert to JSON string
       final jsonString = const JsonEncoder.withIndent('  ').convert(exportData);
       
-      // Get Downloads directory
-      final directory = await getExternalStorageDirectory();
-      final downloadsDir = Directory('${directory?.path}/Download');
-      if (!await downloadsDir.exists()) {
-        await downloadsDir.create(recursive: true);
-      }
+      // Get app documents directory
+      final directory = await getApplicationDocumentsDirectory();
       
       // Create filename with timestamp
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       final fileName = 'monitoring_backup_$timestamp.json';
-      final file = File('${downloadsDir.path}/$fileName');
+      final file = File('${directory.path}/$fileName');
       
       // Write file
       await file.writeAsString(jsonString);
@@ -95,8 +95,11 @@ class _DatabaseManagementScreenState extends State<DatabaseManagementScreen> {
         _isLoading = false;
       });
 
-      _showSuccessSnackBar('Backup berhasil disimpan: $fileName');
+      _showSuccessSnackBar('Backup berhasil disimpan');
       _loadDatabaseInfo();
+      
+      // Show share options
+      _showShareBackupDialog(file.path, fileName);
       
     } catch (e) {
       setState(() {
@@ -106,51 +109,254 @@ class _DatabaseManagementScreenState extends State<DatabaseManagementScreen> {
     }
   }
 
-  Future<void> _importDatabase() async {
+  void _showShareBackupDialog(String filePath, String fileName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Backup Berhasil'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('File backup telah disimpan di:'),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.backgroundColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.borderColor),
+              ),
+              child: Text(
+                filePath,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Anda dapat membagikan file ini atau menyalinnya ke lokasi lain.'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _copyPathToClipboard(filePath);
+            },
+            child: const Text('Salin Path'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _shareBackupFile(filePath, fileName);
+            },
+            child: const Text('Bagikan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _copyPathToClipboard(String path) async {
+    await Clipboard.setData(ClipboardData(text: path));
+    _showSuccessSnackBar('Path berhasil disalin ke clipboard');
+  }
+
+  Future<void> _shareBackupFile(String filePath, String fileName) async {
     try {
-      // Pick file
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
+      final file = XFile(filePath);
+      await Share.shareXFiles(
+        [file],
+        text: 'Backup database MBZ Monitoring - $fileName',
+        subject: 'Database Backup',
       );
+    } catch (e) {
+      _showErrorSnackBar('Gagal membagikan file: $e');
+    }
+  }
 
-      if (result != null) {
-        setState(() {
-          _isLoading = true;
-        });
+  Future<void> _importDatabase() async {
+    // Show manual import instructions
+    _showManualImportDialog();
+  }
 
-        final file = File(result.files.single.path!);
-        final jsonString = await file.readAsString();
-        final backupData = json.decode(jsonString);
+  void _showManualImportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Import Database'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Untuk mengimport database, silakan:',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+              const Text('1. Pastikan file backup (.json) tersedia di perangkat'),
+              const SizedBox(height: 8),
+              const Text('2. Salin file ke folder aplikasi:'),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.backgroundColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.borderColor),
+                ),
+                child: Text(
+                  '/storage/emulated/0/Android/data/com.example.monitoring/files/',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text('3. Tekan "Cari File Backup" di bawah'),
+              const SizedBox(height: 16),
+              const Text(
+                'PERINGATAN: Import akan mengganti semua data yang ada!',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _scanForBackupFiles();
+            },
+            child: const Text('Cari File Backup'),
+          ),
+        ],
+      ),
+    );
+  }
 
-        // Validate backup data
-        if (!_isValidBackupData(backupData)) {
-          throw Exception('Format backup tidak valid');
-        }
+  Future<void> _scanForBackupFiles() async {
+    setState(() {
+      _isLoading = true;
+    });
 
-        // Show confirmation dialog
-        final confirm = await _showConfirmationDialog(
-          'Import Database',
-          'Import akan menghapus semua data yang ada dan menggantinya dengan data dari backup. '
-          'Pastikan Anda sudah membuat backup terlebih dahulu.\n\n'
-          'Lanjutkan import?',
-        );
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final files = directory.listSync()
+          .where((file) => file.path.endsWith('.json') && file.path.contains('monitoring_backup'))
+          .cast<File>()
+          .toList();
 
-        if (confirm == true) {
-          await _storageService.importData(backupData);
-          _showSuccessSnackBar('Database berhasil diimport');
-          _loadDatabaseInfo();
-        }
+      setState(() {
+        _isLoading = false;
+      });
 
-        setState(() {
-          _isLoading = false;
-        });
+      if (files.isEmpty) {
+        _showErrorSnackBar('Tidak ditemukan file backup');
+        return;
       }
+
+      _showBackupFilesDialog(files);
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
+      _showErrorSnackBar('Gagal mencari file backup: $e');
+    }
+  }
+
+  void _showBackupFilesDialog(List<File> files) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Pilih File Backup'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: files.length,
+            itemBuilder: (context, index) {
+              final file = files[index];
+              final fileName = file.path.split('/').last;
+              final stat = file.statSync();
+              final size = (stat.size / 1024).toStringAsFixed(1);
+              
+              return ListTile(
+                leading: const Icon(Icons.backup),
+                title: Text(fileName),
+                subtitle: Text(
+                  'Ukuran: ${size} KB\n'
+                  'Dimodifikasi: ${DateFormat('dd/MM/yyyy HH:mm').format(stat.modified)}',
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmImport(file);
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmImport(File file) async {
+    final confirm = await _showConfirmationDialog(
+      'Konfirmasi Import',
+      'Import akan menghapus semua data yang ada dan menggantinya dengan data dari backup.\n\n'
+      'File: ${file.path.split('/').last}\n\n'
+      'Lanjutkan import?',
+    );
+
+    if (confirm == true) {
+      await _performImport(file);
+    }
+  }
+
+  Future<void> _performImport(File file) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final jsonString = await file.readAsString();
+      final backupData = json.decode(jsonString);
+
+      // Validate backup data
+      if (!_isValidBackupData(backupData)) {
+        throw Exception('Format backup tidak valid');
+      }
+
+      await _storageService.importData(backupData);
+      _showSuccessSnackBar('Database berhasil diimport');
+      _loadDatabaseInfo();
+    } catch (e) {
       _showErrorSnackBar('Gagal mengimport database: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
