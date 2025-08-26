@@ -32,7 +32,7 @@ class PriorityInfoWidget extends StatelessWidget {
         const SizedBox(height: AppTheme.spacing12),
         
         if (isReadOnly && selectedPriority != null) ...[
-          _buildPriorityDisplay(selectedPriority!),
+          _buildPriorityDisplay(context, selectedPriority!),
         ] else ...[
           // Priority selection cards
           ...PriorityConfig.priorities.entries.map((entry) {
@@ -156,7 +156,7 @@ class PriorityInfoWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildPriorityDisplay(String priorityKey) {
+  Widget _buildPriorityDisplay(BuildContext context, String priorityKey) {
     final priorityData = PriorityConfig.getPriorityData(priorityKey);
     if (priorityData == null) return const SizedBox.shrink();
 
@@ -241,7 +241,7 @@ class CategoryInfoWidget extends StatelessWidget {
         const SizedBox(height: AppTheme.spacing12),
         
         if (isReadOnly && selectedCategory != null) ...[
-          _buildCategoryDisplay(selectedCategory!),
+          _buildCategoryDisplay(context, selectedCategory!),
         ] else ...[
           GridView.builder(
             shrinkWrap: true,
@@ -337,7 +337,7 @@ class CategoryInfoWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryDisplay(String categoryKey) {
+  Widget _buildCategoryDisplay(BuildContext context, String categoryKey) {
     final config = AppCategoryConfigs.getConfig(categoryKey);
     if (config == null) return const SizedBox.shrink();
 

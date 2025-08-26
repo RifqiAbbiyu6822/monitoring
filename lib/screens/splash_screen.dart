@@ -172,7 +172,7 @@ class _SplashScreenState extends State<SplashScreen>
                                 width: 80,
                                 height: 80,
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                  color: AppTheme.primaryColor.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                               ),
@@ -241,10 +241,10 @@ class _SplashScreenState extends State<SplashScreen>
                           vertical: AppTheme.spacing8,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                          color: AppTheme.primaryColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(AppTheme.radius20),
                           border: Border.all(
-                            color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                            color: AppTheme.primaryColor.withOpacity(0.2),
                             width: 1,
                           ),
                         ),
@@ -294,7 +294,7 @@ class _SplashScreenState extends State<SplashScreen>
                         valueColor: AlwaysStoppedAnimation<Color>(
                           AppTheme.primaryColor,
                         ),
-                        backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                        backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
                       ),
                     ),
                     

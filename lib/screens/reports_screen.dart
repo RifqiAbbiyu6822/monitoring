@@ -23,7 +23,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
   
   List<Temuan> _temuanList = [];
   List<Perbaikan> _perbaikanList = [];
-  Map<String, int> _statistics = {};
 
   @override
   void initState() {
@@ -39,12 +38,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
     try {
       final temuanList = await _storageService.getAllTemuan();
       final perbaikanList = await _storageService.getAllPerbaikan();
-      final stats = await _storageService.getSummaryStatistics();
 
       setState(() {
         _temuanList = temuanList;
         _perbaikanList = perbaikanList;
-        _statistics = stats;
         _isLoading = false;
       });
     } catch (e) {
@@ -271,6 +268,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildSummaryCards() {
+    // Gunakan data yang sudah difilter berdasarkan periode yang dipilih
     final filteredTemuanCount = _filteredTemuan.length;
     final filteredPerbaikanCount = _filteredPerbaikan.length;
     final completedTemuan = _filteredTemuan.where((t) => t.status == 'completed').length;
@@ -282,7 +280,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       crossAxisCount: 2,
       crossAxisSpacing: AppTheme.spacing16,
       mainAxisSpacing: AppTheme.spacing16,
-      childAspectRatio: 1.3,
+      childAspectRatio: 1.5,
       children: [
         _buildSummaryCard(
           'Total Temuan',
@@ -316,20 +314,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return EnhancedCard(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(AppTheme.spacing12),
+            padding: const EdgeInsets.all(AppTheme.spacing6),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(AppTheme.radius12),
             ),
             child: Icon(
               icon,
-              size: 24,
+              size: 18,
               color: color,
             ),
           ),
-          const SizedBox(height: AppTheme.spacing12),
+          const SizedBox(height: AppTheme.spacing6),
           Text(
             value,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -338,16 +337,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: AppTheme.spacing4),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textSecondary,
-              fontWeight: FontWeight.w500,
+          const SizedBox(height: AppTheme.spacing2),
+          Flexible(
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
