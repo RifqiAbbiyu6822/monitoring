@@ -1,4 +1,5 @@
 // lib/screens/temuan/temuan_detail_screen.dart - Enhanced Detail View
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../model/temuan.dart';
 import '../../config/category_config.dart';
@@ -385,11 +386,10 @@ class _TemuanDetailScreenState extends State<TemuanDetailScreen>
           if (widget.temuan.photos.isEmpty) ...[
             _buildEmptyPhotosState(),
           ] else ...[
-            ModernPhotoGrid(
+            PhotoViewerWidget(
               photos: widget.temuan.photos,
-              canEdit: false,
               title: 'Dokumentasi Temuan',
-              onViewPhoto: (photoPath) => _viewPhoto(photoPath),
+              emptyMessage: 'Tidak ada foto untuk temuan ini',
             ),
             const SizedBox(height: 24),
             

@@ -1,6 +1,7 @@
-// lib/services/database_service.dart
+// lib/services/database_service.dart - Fixed Implementation
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
@@ -74,64 +75,13 @@ class DatabaseService {
         before_photos TEXT, -- JSON array string
         progress_photos TEXT, -- JSON array string
         after_photos TEXT, -- JSON array string
+        documentation_photos TEXT, -- JSON array string for updates
         assigned_to TEXT NOT NULL,
         created_at TEXT NOT NULL,
         created_by TEXT NOT NULL,
         notes TEXT,
         cost REAL,
         FOREIGN KEY (temuan_id) REFERENCES temuan (id) ON DELETE CASCADE
-      )
-    ''');
-
-    // Table untuk User/Petugas
-    await db.execute('''
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT UNIQUE NOT NULL,
-        full_name TEXT NOT NULL,
-        email TEXT,
-        role TEXT NOT NULL DEFAULT 'operator',
-        section TEXT,
-        phone TEXT,
-        is_active INTEGER DEFAULT 1,
-        created_at TEXT NOT NULL
-      )
-    ''');
-
-    // Table untuk Log Aktivitas
-    await db.execute('''
-      CREATE TABLE activity_logs (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        action_type TEXT NOT NULL, -- create, update, delete
-        target_type TEXT NOT NULL, -- temuan, perbaikan
-        target_id TEXT NOT NULL,
-        description TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id)
-      )
-    ''');
-
-    // Table untuk Kategori dan Sub-kategori
-    await db.execute('''
-      CREATE TABLE categories (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        description TEXT,
-        icon_code INTEGER,
-        color_code TEXT,
-        is_active INTEGER DEFAULT 1
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE subcategories (
-        id TEXT PRIMARY KEY,
-        category_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        description TEXT,
-        is_active INTEGER DEFAULT 1,
-        FOREIGN KEY (category_id) REFERENCES categories (id)
       )
     ''');
 
@@ -148,128 +98,15 @@ class DatabaseService {
     // Indexes untuk optimasi query
     await db.execute('CREATE INDEX idx_temuan_status ON temuan (status)');
     await db.execute('CREATE INDEX idx_temuan_priority ON temuan (priority)');
-    await db.execute('CREATE INDEX idx_temuan_section ON temuan (section)');
     await db.execute('CREATE INDEX idx_temuan_created_at ON temuan (created_at)');
-    
     await db.execute('CREATE INDEX idx_perbaikan_status ON perbaikan (status)');
     await db.execute('CREATE INDEX idx_perbaikan_temuan_id ON perbaikan (temuan_id)');
-    await db.execute('CREATE INDEX idx_perbaikan_created_at ON perbaikan (created_at)');
-    
-    await db.execute('CREATE INDEX idx_activity_logs_created_at ON activity_logs (created_at)');
-    await db.execute('CREATE INDEX idx_activity_logs_user_id ON activity_logs (user_id)');
-
-    // Insert data default
-    await _insertDefaultData(db);
-  }
-
-  Future<void> _insertDefaultData(Database db) async {
-    // Insert default user
-    await db.insert('users', {
-      'id': 'user_default',
-      'username': 'admin',
-      'full_name': 'Administrator',
-      'email': 'admin@mbz.com',
-      'role': 'admin',
-      'section': 'All',
-      'phone': '081234567890',
-      'is_active': 1,
-      'created_at': DateTime.now().toIso8601String(),
-    });
-
-    // Insert categories
-    final categories = [
-      {
-        'id': 'jalan',
-        'name': 'Jalan',
-        'description': 'Kerusakan pada permukaan dan struktur jalan',
-        'icon_code': 0xe1a5, // Icons.directions_car
-        'color_code': '#2563EB',
-        'is_active': 1,
-      },
-      {
-        'id': 'jembatan',
-        'name': 'Jembatan',
-        'description': 'Kerusakan pada struktur dan komponen jembatan',
-        'icon_code': 0xe048, // Icons.architecture
-        'color_code': '#8B5CF6',
-        'is_active': 1,
-      },
-      {
-        'id': 'marka',
-        'name': 'Marka Jalan',
-        'description': 'Kondisi marka dan penanda jalan',
-        'icon_code': 0xe3a6, // Icons.straighten
-        'color_code': '#F59E0B',
-        'is_active': 1,
-      },
-      {
-        'id': 'rambu',
-        'name': 'Rambu Lalu Lintas',
-        'description': 'Kondisi rambu dan papan informasi lalu lintas',
-        'icon_code': 0xe553, // Icons.traffic
-        'color_code': '#EF4444',
-        'is_active': 1,
-      },
-      {
-        'id': 'drainase',
-        'name': 'Sistem Drainase',
-        'description': 'Kondisi sistem drainase dan pengelolaan air',
-        'icon_code': 0xe798, // Icons.water_drop
-        'color_code': '#14B8A6',
-        'is_active': 1,
-      },
-      {
-        'id': 'penerangan',
-        'name': 'Penerangan Jalan',
-        'description': 'Kondisi sistem penerangan jalan umum',
-        'icon_code': 0xe335, // Icons.lightbulb
-        'color_code': '#F59E0B',
-        'is_active': 1,
-      },
-    ];
-
-    for (final category in categories) {
-      await db.insert('categories', category);
-    }
-
-    // Insert subcategories for Jalan
-    final jalanSubcategories = [
-      'Lubang', 'Retak Memanjang', 'Retak Melintang', 'Retak Kulit Buaya',
-      'Aus/Abrasi', 'Amblas', 'Gelombang', 'Bleeding/Berdarah', 'Raveling/Butiran Lepas'
-    ];
-
-    for (int i = 0; i < jalanSubcategories.length; i++) {
-      await db.insert('subcategories', {
-        'id': 'jalan_sub_$i',
-        'category_id': 'jalan',
-        'name': jalanSubcategories[i],
-        'description': 'Kerusakan jalan: ${jalanSubcategories[i]}',
-        'is_active': 1,
-      });
-    }
-
-    // Insert subcategories for other categories (simplified)
-    final otherSubcategories = {
-      'jembatan': ['Kerusakan Struktur Utama', 'Korosi Baja', 'Retak Beton', 'Kebocoran'],
-      'marka': ['Marka Garis Putus Memudar', 'Marka Garis Solid Memudar', 'Marka Panah Tidak Terlihat'],
-      'rambu': ['Rambu Rusak/Penyok', 'Rambu Hilang', 'Rambu Terbalik', 'Rambu Tertutup Vegetasi'],
-      'drainase': ['Saluran Tersumbat', 'Gorong-gorong Rusak', 'Inlet/Outlet Bocor', 'Tidak Ada Saluran'],
-      'penerangan': ['Lampu PJU Mati', 'Lampu Redup/Berkedip', 'Tiang Lampu Rusak', 'Kabel Putus'],
-    };
-
-    for (final entry in otherSubcategories.entries) {
-      for (int i = 0; i < entry.value.length; i++) {
-        await db.insert('subcategories', {
-          'id': '${entry.key}_sub_$i',
-          'category_id': entry.key,
-          'name': entry.value[i],
-          'description': 'Sub kategori ${entry.key}: ${entry.value[i]}',
-          'is_active': 1,
-        });
-      }
-    }
 
     // Insert default settings
+    await _insertDefaultSettings(db);
+  }
+
+  Future<void> _insertDefaultSettings(Database db) async {
     final defaultSettings = [
       {'key': 'app_version', 'value': '1.0.0', 'description': 'Versi aplikasi'},
       {'key': 'default_section', 'value': 'A', 'description': 'Seksi default'},
@@ -285,11 +122,13 @@ class DatabaseService {
     }
   }
 
-  // ==================== TEMUAN OPERATIONS ====================
+  // ==================== ID GENERATION ====================
 
   String _generateId() {
     return DateTime.now().millisecondsSinceEpoch.toString();
   }
+
+  // ==================== TEMUAN OPERATIONS ====================
 
   Future<List<Temuan>> getAllTemuan() async {
     final db = await database;
@@ -340,16 +179,6 @@ class DatabaseService {
     );
 
     await db.insert('temuan', _temuanToMap(temuan));
-    
-    // Log activity
-    await _logActivity(
-      userId: temuanData['createdBy'] ?? 'user_default',
-      actionType: 'create',
-      targetType: 'temuan',
-      targetId: id,
-      description: 'Membuat temuan: ${temuan.description}',
-    );
-
     return temuan;
   }
 
@@ -391,37 +220,15 @@ class DatabaseService {
       whereArgs: [id],
     );
 
-    // Log activity
-    await _logActivity(
-      userId: updateData['updatedBy'] ?? 'user_default',
-      actionType: 'update',
-      targetType: 'temuan',
-      targetId: id,
-      description: 'Mengupdate temuan: ${updatedTemuan.description}',
-    );
-
     return updatedTemuan;
   }
 
   Future<void> deleteTemuan(String id) async {
     final db = await database;
-    
-    // Get temuan for logging
-    final temuan = await getTemuanById(id);
-    
     await db.delete(
       'temuan',
       where: 'id = ?',
       whereArgs: [id],
-    );
-
-    // Log activity
-    await _logActivity(
-      userId: 'user_default',
-      actionType: 'delete',
-      targetType: 'temuan',
-      targetId: id,
-      description: 'Menghapus temuan: ${temuan?.description ?? id}',
     );
   }
 
@@ -478,6 +285,9 @@ class DatabaseService {
       beforePhotos: List<String>.from(perbaikanData['beforePhotos'] ?? []),
       progressPhotos: List<String>.from(perbaikanData['progressPhotos'] ?? []),
       afterPhotos: List<String>.from(perbaikanData['afterPhotos'] ?? []),
+      documentationPhotos: perbaikanData['documentationPhotos'] != null
+          ? List<String>.from(perbaikanData['documentationPhotos'])
+          : null,
       assignedTo: perbaikanData['assignedTo'],
       createdAt: DateTime.now(),
       createdBy: perbaikanData['createdBy'] ?? 'Unknown User',
@@ -497,15 +307,6 @@ class DatabaseService {
       },
       where: 'id = ?',
       whereArgs: [perbaikan.temuanId],
-    );
-
-    // Log activity
-    await _logActivity(
-      userId: perbaikanData['createdBy'] ?? 'user_default',
-      actionType: 'create',
-      targetType: 'perbaikan',
-      targetId: id,
-      description: 'Membuat perbaikan: ${perbaikan.workDescription}',
     );
 
     return perbaikan;
@@ -547,6 +348,9 @@ class DatabaseService {
       afterPhotos: updateData['afterPhotos'] != null 
           ? List<String>.from(updateData['afterPhotos']) 
           : existingPerbaikan.afterPhotos,
+      documentationPhotos: updateData['documentationPhotos'] != null
+          ? List<String>.from(updateData['documentationPhotos'])
+          : existingPerbaikan.documentationPhotos,
       assignedTo: updateData['assignedTo'] ?? existingPerbaikan.assignedTo,
       createdAt: existingPerbaikan.createdAt,
       createdBy: existingPerbaikan.createdBy,
@@ -575,22 +379,13 @@ class DatabaseService {
       );
     }
 
-    // Log activity
-    await _logActivity(
-      userId: 'user_default',
-      actionType: 'update',
-      targetType: 'perbaikan',
-      targetId: id,
-      description: 'Mengupdate perbaikan: ${updatedPerbaikan.workDescription}',
-    );
-
     return updatedPerbaikan;
   }
 
   Future<void> deletePerbaikan(String id) async {
     final db = await database;
     
-    // Get perbaikan for logging and temuan update
+    // Get perbaikan for temuan update
     final perbaikan = await getPerbaikanById(id);
     
     await db.delete(
@@ -612,15 +407,6 @@ class DatabaseService {
         whereArgs: [perbaikan.temuanId],
       );
     }
-
-    // Log activity
-    await _logActivity(
-      userId: 'user_default',
-      actionType: 'delete',
-      targetType: 'perbaikan',
-      targetId: id,
-      description: 'Menghapus perbaikan: ${perbaikan?.workDescription ?? id}',
-    );
   }
 
   // ==================== STATISTICS ====================
@@ -704,366 +490,6 @@ class DatabaseService {
     return priorityStats;
   }
 
-  // ==================== ACTIVITY LOGS ====================
-
-  Future<void> _logActivity({
-    required String userId,
-    required String actionType,
-    required String targetType,
-    required String targetId,
-    required String description,
-  }) async {
-    final db = await database;
-    
-    await db.insert('activity_logs', {
-      'id': _generateId(),
-      'user_id': userId,
-      'action_type': actionType,
-      'target_type': targetType,
-      'target_id': targetId,
-      'description': description,
-      'created_at': DateTime.now().toIso8601String(),
-    });
-  }
-
-  Future<List<Map<String, dynamic>>> getActivityLogs({
-    int limit = 50,
-    String? userId,
-  }) async {
-    final db = await database;
-    
-    String whereClause = '';
-    List<dynamic> whereArgs = [];
-    
-    if (userId != null) {
-      whereClause = 'WHERE user_id = ?';
-      whereArgs = [userId];
-    }
-    
-    final List<Map<String, dynamic>> logs = await db.rawQuery('''
-      SELECT al.*, u.full_name as user_name
-      FROM activity_logs al
-      LEFT JOIN users u ON al.user_id = u.id
-      $whereClause
-      ORDER BY al.created_at DESC
-      LIMIT ?
-    ''', [...whereArgs, limit]);
-
-    return logs;
-  }
-
-  // ==================== HELPER METHODS ====================
-
-  Map<String, dynamic> _temuanToMap(Temuan temuan) {
-    return {
-      'id': temuan.id,
-      'category': temuan.category,
-      'subcategory': temuan.subcategory,
-      'section': temuan.section,
-      'km_point': temuan.kmPoint,
-      'lane': temuan.lane,
-      'description': temuan.description,
-      'priority': temuan.priority,
-      'status': temuan.status,
-      'latitude': temuan.latitude,
-      'longitude': temuan.longitude,
-      'photos': temuan.photos.join(','), // Convert list to comma-separated string
-      'created_at': temuan.createdAt.toIso8601String(),
-      'created_by': temuan.createdBy,
-      'updated_at': temuan.updatedAt?.toIso8601String(),
-      'updated_by': temuan.updatedBy,
-      'notes': temuan.notes,
-    };
-  }
-
-  Temuan _mapToTemuan(Map<String, dynamic> map) {
-    return Temuan(
-      id: map['id'],
-      category: map['category'],
-      subcategory: map['subcategory'],
-      section: map['section'],
-      kmPoint: map['km_point'],
-      lane: map['lane'],
-      description: map['description'],
-      priority: map['priority'],
-      status: map['status'],
-      latitude: map['latitude'] ?? 0.0,
-      longitude: map['longitude'] ?? 0.0,
-      photos: map['photos'] != null && map['photos'].isNotEmpty 
-          ? map['photos'].split(',') 
-          : <String>[],
-      createdAt: DateTime.parse(map['created_at']),
-      createdBy: map['created_by'],
-      updatedAt: map['updated_at'] != null 
-          ? DateTime.parse(map['updated_at']) 
-          : null,
-      updatedBy: map['updated_by'],
-      notes: map['notes'],
-    );
-  }
-
-  Map<String, dynamic> _perbaikanToMap(Perbaikan perbaikan) {
-    return {
-      'id': perbaikan.id,
-      'temuan_id': perbaikan.temuanId,
-      'category': perbaikan.category,
-      'subcategory': perbaikan.subcategory,
-      'section': perbaikan.section,
-      'km_point': perbaikan.kmPoint,
-      'lane': perbaikan.lane,
-      'work_description': perbaikan.workDescription,
-      'contractor': perbaikan.contractor,
-      'status': perbaikan.status,
-      'start_date': perbaikan.startDate.toIso8601String(),
-      'end_date': perbaikan.endDate?.toIso8601String(),
-      'progress': perbaikan.progress,
-      'before_photos': perbaikan.beforePhotos.join(','),
-      'progress_photos': perbaikan.progressPhotos.join(','),
-      'after_photos': perbaikan.afterPhotos.join(','),
-      'assigned_to': perbaikan.assignedTo,
-      'created_at': perbaikan.createdAt.toIso8601String(),
-      'created_by': perbaikan.createdBy,
-      'notes': perbaikan.notes,
-      'cost': perbaikan.cost,
-    };
-  }
-
-  Perbaikan _mapToPerbaikan(Map<String, dynamic> map) {
-    return Perbaikan(
-      id: map['id'],
-      temuanId: map['temuan_id'],
-      category: map['category'],
-      subcategory: map['subcategory'],
-      section: map['section'],
-      kmPoint: map['km_point'],
-      lane: map['lane'],
-      workDescription: map['work_description'],
-      contractor: map['contractor'],
-      status: map['status'],
-      startDate: DateTime.parse(map['start_date']),
-      endDate: map['end_date'] != null 
-          ? DateTime.parse(map['end_date']) 
-          : null,
-      progress: map['progress']?.toDouble() ?? 0.0,
-      beforePhotos: map['before_photos'] != null && map['before_photos'].isNotEmpty 
-          ? map['before_photos'].split(',') 
-          : <String>[],
-      progressPhotos: map['progress_photos'] != null && map['progress_photos'].isNotEmpty 
-          ? map['progress_photos'].split(',') 
-          : <String>[],
-      afterPhotos: map['after_photos'] != null && map['after_photos'].isNotEmpty 
-          ? map['after_photos'].split(',') 
-          : <String>[],
-      assignedTo: map['assigned_to'],
-      createdAt: DateTime.parse(map['created_at']),
-      createdBy: map['created_by'],
-      notes: map['notes'],
-      cost: map['cost']?.toDouble(),
-    );
-  }
-
-  // ==================== SEARCH & FILTER OPERATIONS ====================
-
-  Future<List<Temuan>> searchTemuan({
-    String? query,
-    String? category,
-    String? status,
-    String? priority,
-    String? section,
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    final db = await database;
-    
-    String whereClause = '1=1';
-    List<dynamic> whereArgs = [];
-
-    if (query != null && query.isNotEmpty) {
-      whereClause += ' AND (description LIKE ? OR km_point LIKE ? OR notes LIKE ?)';
-      whereArgs.addAll(['%$query%', '%$query%', '%$query%']);
-    }
-
-    if (category != null) {
-      whereClause += ' AND category = ?';
-      whereArgs.add(category);
-    }
-
-    if (status != null) {
-      whereClause += ' AND status = ?';
-      whereArgs.add(status);
-    }
-
-    if (priority != null) {
-      whereClause += ' AND priority = ?';
-      whereArgs.add(priority);
-    }
-
-    if (section != null) {
-      whereClause += ' AND section = ?';
-      whereArgs.add(section);
-    }
-
-    if (startDate != null) {
-      whereClause += ' AND created_at >= ?';
-      whereArgs.add(startDate.toIso8601String());
-    }
-
-    if (endDate != null) {
-      whereClause += ' AND created_at <= ?';
-      whereArgs.add(endDate.toIso8601String());
-    }
-
-    final List<Map<String, dynamic>> maps = await db.query(
-      'temuan',
-      where: whereClause,
-      whereArgs: whereArgs,
-      orderBy: 'created_at DESC',
-    );
-
-    return List.generate(maps.length, (i) {
-      return _mapToTemuan(maps[i]);
-    });
-  }
-
-  Future<List<Perbaikan>> searchPerbaikan({
-    String? query,
-    String? status,
-    String? contractor,
-    String? assignedTo,
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    final db = await database;
-    
-    String whereClause = '1=1';
-    List<dynamic> whereArgs = [];
-
-    if (query != null && query.isNotEmpty) {
-      whereClause += ' AND (work_description LIKE ? OR notes LIKE ?)';
-      whereArgs.addAll(['%$query%', '%$query%']);
-    }
-
-    if (status != null) {
-      whereClause += ' AND status = ?';
-      whereArgs.add(status);
-    }
-
-    if (contractor != null) {
-      whereClause += ' AND contractor LIKE ?';
-      whereArgs.add('%$contractor%');
-    }
-
-    if (assignedTo != null) {
-      whereClause += ' AND assigned_to LIKE ?';
-      whereArgs.add('%$assignedTo%');
-    }
-
-    if (startDate != null) {
-      whereClause += ' AND created_at >= ?';
-      whereArgs.add(startDate.toIso8601String());
-    }
-
-    if (endDate != null) {
-      whereClause += ' AND created_at <= ?';
-      whereArgs.add(endDate.toIso8601String());
-    }
-
-    final List<Map<String, dynamic>> maps = await db.query(
-      'perbaikan',
-      where: whereClause,
-      whereArgs: whereArgs,
-      orderBy: 'created_at DESC',
-    );
-
-    return List.generate(maps.length, (i) {
-      return _mapToPerbaikan(maps[i]);
-    });
-  }
-
-  // ==================== ADVANCED ANALYTICS ====================
-
-  Future<Map<String, dynamic>> getDetailedStatistics({
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    final db = await database;
-    
-    String dateFilter = '';
-    List<dynamic> dateArgs = [];
-    
-    if (startDate != null && endDate != null) {
-      dateFilter = ' WHERE created_at BETWEEN ? AND ?';
-      dateArgs = [startDate.toIso8601String(), endDate.toIso8601String()];
-    } else if (startDate != null) {
-      dateFilter = ' WHERE created_at >= ?';
-      dateArgs = [startDate.toIso8601String()];
-    } else if (endDate != null) {
-      dateFilter = ' WHERE created_at <= ?';
-      dateArgs = [endDate.toIso8601String()];
-    }
-
-    // Temuan statistics by category
-    final categoryStats = await db.rawQuery('''
-      SELECT category, COUNT(*) as count, 
-             SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-             SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
-             SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
-      FROM temuan$dateFilter
-      GROUP BY category
-    ''', dateArgs);
-
-    // Temuan statistics by priority
-    final priorityStats = await db.rawQuery('''
-      SELECT priority, COUNT(*) as count
-      FROM temuan$dateFilter
-      GROUP BY priority
-    ''', dateArgs);
-
-    // Temuan statistics by section
-    final sectionStats = await db.rawQuery('''
-      SELECT section, COUNT(*) as count
-      FROM temuan$dateFilter
-      GROUP BY section
-    ''', dateArgs);
-
-    // Perbaikan statistics
-    final perbaikanStats = await db.rawQuery('''
-      SELECT status, COUNT(*) as count, AVG(progress) as avg_progress
-      FROM perbaikan$dateFilter
-      GROUP BY status
-    ''', dateArgs);
-
-    // Monthly trend (last 12 months)
-    final monthlyTrend = await db.rawQuery('''
-      SELECT strftime('%Y-%m', created_at) as month,
-             COUNT(*) as temuan_count
-      FROM temuan
-      WHERE created_at >= date('now', '-12 months')
-      GROUP BY strftime('%Y-%m', created_at)
-      ORDER BY month
-    ''');
-
-    // Top contractors by work count
-    final contractorStats = await db.rawQuery('''
-      SELECT contractor, COUNT(*) as work_count,
-             AVG(progress) as avg_progress,
-             SUM(CASE WHEN status = 'selesai' THEN 1 ELSE 0 END) as completed_count
-      FROM perbaikan$dateFilter
-      GROUP BY contractor
-      ORDER BY work_count DESC
-      LIMIT 10
-    ''', dateArgs);
-
-    return {
-      'categoryStats': categoryStats,
-      'priorityStats': priorityStats,
-      'sectionStats': sectionStats,
-      'perbaikanStats': perbaikanStats,
-      'monthlyTrend': monthlyTrend,
-      'contractorStats': contractorStats,
-    };
-  }
-
   // ==================== BACKUP & RESTORE ====================
 
   Future<Map<String, dynamic>> exportData() async {
@@ -1071,10 +497,6 @@ class DatabaseService {
     
     final temuan = await db.query('temuan');
     final perbaikan = await db.query('perbaikan');
-    final activityLogs = await db.query('activity_logs');
-    final users = await db.query('users');
-    final categories = await db.query('categories');
-    final subcategories = await db.query('subcategories');
     final settings = await db.query('settings');
 
     return {
@@ -1083,10 +505,6 @@ class DatabaseService {
       'data': {
         'temuan': temuan,
         'perbaikan': perbaikan,
-        'activity_logs': activityLogs,
-        'users': users,
-        'categories': categories,
-        'subcategories': subcategories,
         'settings': settings,
       },
     };
@@ -1099,41 +517,29 @@ class DatabaseService {
       // Clear existing data
       await txn.delete('temuan');
       await txn.delete('perbaikan');
-      await txn.delete('activity_logs');
-      await txn.delete('users');
-      await txn.delete('categories');
-      await txn.delete('subcategories');
       await txn.delete('settings');
 
-      final data = backupData['data'];
+      final data = backupData['data'] as Map<String, dynamic>;
       
-      // Import data
-      for (final temuan in data['temuan'] ?? []) {
-        await txn.insert('temuan', temuan);
+      // Import temuan
+      if (data['temuan'] != null) {
+        for (final temuan in data['temuan'] as List) {
+          await txn.insert('temuan', temuan as Map<String, dynamic>);
+        }
       }
       
-      for (final perbaikan in data['perbaikan'] ?? []) {
-        await txn.insert('perbaikan', perbaikan);
+      // Import perbaikan
+      if (data['perbaikan'] != null) {
+        for (final perbaikan in data['perbaikan'] as List) {
+          await txn.insert('perbaikan', perbaikan as Map<String, dynamic>);
+        }
       }
       
-      for (final log in data['activity_logs'] ?? []) {
-        await txn.insert('activity_logs', log);
-      }
-      
-      for (final user in data['users'] ?? []) {
-        await txn.insert('users', user);
-      }
-      
-      for (final category in data['categories'] ?? []) {
-        await txn.insert('categories', category);
-      }
-      
-      for (final subcategory in data['subcategories'] ?? []) {
-        await txn.insert('subcategories', subcategory);
-      }
-      
-      for (final setting in data['settings'] ?? []) {
-        await txn.insert('settings', setting);
+      // Import settings
+      if (data['settings'] != null) {
+        for (final setting in data['settings'] as List) {
+          await txn.insert('settings', setting as Map<String, dynamic>);
+        }
       }
     });
   }
@@ -1183,17 +589,6 @@ class DatabaseService {
 
   // ==================== MAINTENANCE ====================
 
-  Future<void> cleanupOldLogs({int daysToKeep = 90}) async {
-    final db = await database;
-    final cutoffDate = DateTime.now().subtract(Duration(days: daysToKeep));
-    
-    await db.delete(
-      'activity_logs',
-      where: 'created_at < ?',
-      whereArgs: [cutoffDate.toIso8601String()],
-    );
-  }
-
   Future<Map<String, dynamic>> getDatabaseInfo() async {
     final db = await database;
     
@@ -1203,10 +598,6 @@ class DatabaseService {
     
     final perbaikanCount = Sqflite.firstIntValue(
       await db.rawQuery('SELECT COUNT(*) FROM perbaikan')
-    ) ?? 0;
-    
-    final logsCount = Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(*) FROM activity_logs')
     ) ?? 0;
 
     final dbPath = await getDatabasesPath();
@@ -1220,7 +611,6 @@ class DatabaseService {
       'tables': {
         'temuan_count': temuanCount,
         'perbaikan_count': perbaikanCount,
-        'activity_logs_count': logsCount,
       },
       'last_backup': await getSetting('last_backup_date'),
       'version': await getSetting('app_version') ?? '1.0.0',
@@ -1238,9 +628,315 @@ class DatabaseService {
     await db.transaction((txn) async {
       await txn.delete('temuan');
       await txn.delete('perbaikan');
-      await txn.delete('activity_logs');
-      // Keep users, categories, subcategories, and settings
+      // Keep settings
     });
+  }
+
+  Future<void> cleanupOldLogs({int daysToKeep = 90}) async {
+    // Implementation for future use
+  }
+
+  // ==================== HELPER METHODS ====================
+
+  Map<String, dynamic> _temuanToMap(Temuan temuan) {
+    return {
+      'id': temuan.id,
+      'category': temuan.category,
+      'subcategory': temuan.subcategory,
+      'section': temuan.section,
+      'km_point': temuan.kmPoint,
+      'lane': temuan.lane,
+      'description': temuan.description,
+      'priority': temuan.priority,
+      'status': temuan.status,
+      'latitude': temuan.latitude,
+      'longitude': temuan.longitude,
+      'photos': jsonEncode(temuan.photos),
+      'created_at': temuan.createdAt.toIso8601String(),
+      'created_by': temuan.createdBy,
+      'updated_at': temuan.updatedAt?.toIso8601String(),
+      'updated_by': temuan.updatedBy,
+      'notes': temuan.notes,
+    };
+  }
+
+  Temuan _mapToTemuan(Map<String, dynamic> map) {
+    List<String> photos = [];
+    if (map['photos'] != null && map['photos'].isNotEmpty) {
+      try {
+        final photosData = jsonDecode(map['photos']);
+        if (photosData is List) {
+          photos = photosData.cast<String>();
+        }
+      } catch (e) {
+        // Fallback for old comma-separated format
+        photos = map['photos'].split(',').where((p) => p.isNotEmpty).toList();
+      }
+    }
+
+    return Temuan(
+      id: map['id'],
+      category: map['category'],
+      subcategory: map['subcategory'],
+      section: map['section'],
+      kmPoint: map['km_point'],
+      lane: map['lane'],
+      description: map['description'],
+      priority: map['priority'],
+      status: map['status'],
+      latitude: map['latitude'] ?? 0.0,
+      longitude: map['longitude'] ?? 0.0,
+      photos: photos,
+      createdAt: DateTime.parse(map['created_at']),
+      createdBy: map['created_by'],
+      updatedAt: map['updated_at'] != null 
+          ? DateTime.parse(map['updated_at']) 
+          : null,
+      updatedBy: map['updated_by'],
+      notes: map['notes'],
+    );
+  }
+
+  Map<String, dynamic> _perbaikanToMap(Perbaikan perbaikan) {
+    return {
+      'id': perbaikan.id,
+      'temuan_id': perbaikan.temuanId,
+      'category': perbaikan.category,
+      'subcategory': perbaikan.subcategory,
+      'section': perbaikan.section,
+      'km_point': perbaikan.kmPoint,
+      'lane': perbaikan.lane,
+      'work_description': perbaikan.workDescription,
+      'contractor': perbaikan.contractor,
+      'status': perbaikan.status,
+      'start_date': perbaikan.startDate.toIso8601String(),
+      'end_date': perbaikan.endDate?.toIso8601String(),
+      'progress': perbaikan.progress,
+      'before_photos': jsonEncode(perbaikan.beforePhotos),
+      'progress_photos': jsonEncode(perbaikan.progressPhotos),
+      'after_photos': jsonEncode(perbaikan.afterPhotos),
+      'documentation_photos': perbaikan.documentationPhotos != null
+          ? jsonEncode(perbaikan.documentationPhotos!)
+          : null,
+      'assigned_to': perbaikan.assignedTo,
+      'created_at': perbaikan.createdAt.toIso8601String(),
+      'created_by': perbaikan.createdBy,
+      'notes': perbaikan.notes,
+      'cost': perbaikan.cost,
+    };
+  }
+
+  Perbaikan _mapToPerbaikan(Map<String, dynamic> map) {
+    List<String> beforePhotos = [];
+    List<String> progressPhotos = [];
+    List<String> afterPhotos = [];
+    List<String>? documentationPhotos;
+
+    // Parse JSON photo arrays
+    try {
+      if (map['before_photos'] != null && map['before_photos'].isNotEmpty) {
+        final beforeData = jsonDecode(map['before_photos']);
+        if (beforeData is List) {
+          beforePhotos = beforeData.cast<String>();
+        }
+      }
+      
+      if (map['progress_photos'] != null && map['progress_photos'].isNotEmpty) {
+        final progressData = jsonDecode(map['progress_photos']);
+        if (progressData is List) {
+          progressPhotos = progressData.cast<String>();
+        }
+      }
+      
+      if (map['after_photos'] != null && map['after_photos'].isNotEmpty) {
+        final afterData = jsonDecode(map['after_photos']);
+        if (afterData is List) {
+          afterPhotos = afterData.cast<String>();
+        }
+      }
+
+      if (map['documentation_photos'] != null && map['documentation_photos'].isNotEmpty) {
+        final docData = jsonDecode(map['documentation_photos']);
+        if (docData is List) {
+          documentationPhotos = docData.cast<String>();
+        }
+      }
+    } catch (e) {
+      // Fallback for old comma-separated format
+      if (map['before_photos'] != null) {
+        beforePhotos = map['before_photos'].split(',').where((p) => p.isNotEmpty).toList();
+      }
+      if (map['progress_photos'] != null) {
+        progressPhotos = map['progress_photos'].split(',').where((p) => p.isNotEmpty).toList();
+      }
+      if (map['after_photos'] != null) {
+        afterPhotos = map['after_photos'].split(',').where((p) => p.isNotEmpty).toList();
+      }
+    }
+
+    return Perbaikan(
+      id: map['id'],
+      temuanId: map['temuan_id'],
+      category: map['category'],
+      subcategory: map['subcategory'],
+      section: map['section'],
+      kmPoint: map['km_point'],
+      lane: map['lane'],
+      workDescription: map['work_description'],
+      contractor: map['contractor'],
+      status: map['status'],
+      startDate: DateTime.parse(map['start_date']),
+      endDate: map['end_date'] != null 
+          ? DateTime.parse(map['end_date']) 
+          : null,
+      progress: map['progress']?.toDouble() ?? 0.0,
+      beforePhotos: beforePhotos,
+      progressPhotos: progressPhotos,
+      afterPhotos: afterPhotos,
+      documentationPhotos: documentationPhotos,
+      assignedTo: map['assigned_to'],
+      createdAt: DateTime.parse(map['created_at']),
+      createdBy: map['created_by'],
+      notes: map['notes'],
+      cost: map['cost']?.toDouble(),
+    );
+  }
+
+  // ==================== SEARCH METHODS ====================
+
+  Future<List<Temuan>> searchTemuan({
+    String? query,
+    String? category,
+    String? status,
+    String? priority,
+    String? section,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'temuan',
+      where: _buildSearchWhereClause([
+        if (query != null) 'description LIKE ? OR category LIKE ? OR subcategory LIKE ?',
+        if (category != null) 'category = ?',
+        if (status != null) 'status = ?',
+        if (priority != null) 'priority = ?',
+        if (section != null) 'section = ?',
+        if (startDate != null) 'created_at >= ?',
+        if (endDate != null) 'created_at <= ?',
+      ]),
+      whereArgs: _buildSearchWhereArgs([
+        if (query != null) [query, query, query],
+        if (category != null) [category],
+        if (status != null) [status],
+        if (priority != null) [priority],
+        if (section != null) [section],
+        if (startDate != null) [startDate.toIso8601String()],
+        if (endDate != null) [endDate.toIso8601String()],
+      ]),
+      orderBy: 'created_at DESC',
+    );
+    return List.generate(maps.length, (i) => _mapToTemuan(maps[i]));
+  }
+
+  Future<List<Perbaikan>> searchPerbaikan({
+    String? query,
+    String? status,
+    String? contractor,
+    String? assignedTo,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'perbaikan',
+      where: _buildSearchWhereClause([
+        if (query != null) 'work_description LIKE ? OR category LIKE ? OR subcategory LIKE ?',
+        if (status != null) 'status = ?',
+        if (contractor != null) 'contractor = ?',
+        if (assignedTo != null) 'assigned_to = ?',
+        if (startDate != null) 'start_date >= ?',
+        if (endDate != null) 'end_date <= ?',
+      ]),
+      whereArgs: _buildSearchWhereArgs([
+        if (query != null) [query, query, query],
+        if (status != null) [status],
+        if (contractor != null) [contractor],
+        if (assignedTo != null) [assignedTo],
+        if (startDate != null) [startDate.toIso8601String()],
+        if (endDate != null) [endDate.toIso8601String()],
+      ]),
+      orderBy: 'created_at DESC',
+    );
+    return List.generate(maps.length, (i) => _mapToPerbaikan(maps[i]));
+  }
+
+  String _buildSearchWhereClause(List<String> conditions) {
+    return conditions.isNotEmpty ? conditions.join(' AND ') : '';
+  }
+
+  List<dynamic> _buildSearchWhereArgs(List<List<dynamic>> args) {
+    return args.expand((arg) => arg).toList();
+  }
+
+  // ==================== STATISTICS METHODS ====================
+
+  Future<Map<String, dynamic>> getDetailedStatistics({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await database;
+    
+    // Get temuan statistics
+    final temuanStats = await db.rawQuery('''
+      SELECT 
+        COUNT(*) as total_temuan,
+        SUM(CASE WHEN status = 'Open' THEN 1 ELSE 0 END) as open_temuan,
+        SUM(CASE WHEN status = 'Closed' THEN 1 ELSE 0 END) as closed_temuan,
+        SUM(CASE WHEN priority = 'High' THEN 1 ELSE 0 END) as high_priority,
+        SUM(CASE WHEN priority = 'Medium' THEN 1 ELSE 0 END) as medium_priority,
+        SUM(CASE WHEN priority = 'Low' THEN 1 ELSE 0 END) as low_priority
+      FROM temuan
+      WHERE 1=1
+      ${startDate != null ? "AND created_at >= '${startDate.toIso8601String()}'" : ''}
+      ${endDate != null ? "AND created_at <= '${endDate.toIso8601String()}'" : ''}
+    ''');
+
+    // Get perbaikan statistics
+    final perbaikanStats = await db.rawQuery('''
+      SELECT 
+        COUNT(*) as total_perbaikan,
+        SUM(CASE WHEN status = 'In Progress' THEN 1 ELSE 0 END) as in_progress,
+        SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending,
+        AVG(progress) as avg_progress
+      FROM perbaikan
+      WHERE 1=1
+      ${startDate != null ? "AND created_at >= '${startDate.toIso8601String()}'" : ''}
+      ${endDate != null ? "AND created_at <= '${endDate.toIso8601String()}'" : ''}
+    ''');
+
+    return {
+      'temuan': temuanStats.first,
+      'perbaikan': perbaikanStats.first,
+    };
+  }
+
+  // ==================== ACTIVITY LOGS ====================
+
+  Future<List<Map<String, dynamic>>> getActivityLogs({
+    int limit = 50,
+    String? userId,
+  }) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'activity_logs',
+      where: userId != null ? 'user_id = ?' : null,
+      whereArgs: userId != null ? [userId] : null,
+      orderBy: 'timestamp DESC',
+      limit: limit,
+    );
+    return maps;
   }
 
   // ==================== CLOSE DATABASE ====================
