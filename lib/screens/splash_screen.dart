@@ -1,29 +1,26 @@
-// lib/screens/splash_screen.dart - Enhanced Modern Design
+// lib/screens/splash_screen.dart - Fixed and Simplified
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../main.dart';
 import '../utils/theme.dart';
 
-class ModernSplashScreen extends StatefulWidget {
-  const ModernSplashScreen({super.key});
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
 
   @override
-  State<ModernSplashScreen> createState() => _ModernSplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _ModernSplashScreenState extends State<ModernSplashScreen>
+class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
   late AnimationController _logoController;
   late AnimationController _textController;
   late AnimationController _progressController;
-  late AnimationController _backgroundController;
   
   late Animation<double> _logoScaleAnimation;
-  late Animation<double> _logoRotationAnimation;
   late Animation<double> _textFadeAnimation;
   late Animation<Offset> _textSlideAnimation;
   late Animation<double> _progressAnimation;
-  late Animation<double> _backgroundOpacityAnimation;
 
   @override
   void initState() {
@@ -46,14 +43,6 @@ class _ModernSplashScreenState extends State<ModernSplashScreen>
     ).animate(CurvedAnimation(
       parent: _logoController,
       curve: Curves.elasticOut,
-    ));
-
-    _logoRotationAnimation = Tween<double>(
-      begin: -0.2,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-      parent: _logoController,
-      curve: Curves.easeOutBack,
     ));
 
     // Text animations
@@ -91,23 +80,9 @@ class _ModernSplashScreenState extends State<ModernSplashScreen>
       parent: _progressController,
       curve: Curves.easeInOut,
     ));
-
-    // Background animation
-    _backgroundController = AnimationController(
-      duration: const Duration(milliseconds: 3000),
-      vsync: this,
-    );
-
-    _backgroundOpacityAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(_backgroundController);
   }
 
   Future<void> _startAnimationSequence() async {
-    // Start background animation immediately
-    _backgroundController.forward();
-    
     // Start logo animation after a short delay
     await Future.delayed(const Duration(milliseconds: 300));
     _logoController.forward();
@@ -149,7 +124,6 @@ class _ModernSplashScreenState extends State<ModernSplashScreen>
     _logoController.dispose();
     _textController.dispose();
     _progressController.dispose();
-    _backgroundController.dispose();
     super.dispose();
   }
 
@@ -163,7 +137,6 @@ class _ModernSplashScreenState extends State<ModernSplashScreen>
           _logoController,
           _textController,
           _progressController,
-          _backgroundController,
         ]),
         builder: (context, child) {
           return Container(
@@ -174,50 +147,42 @@ class _ModernSplashScreenState extends State<ModernSplashScreen>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppTheme.primaryColor.withOpacity(_backgroundOpacityAnimation.value * 0.1),
+                  AppTheme.primaryColor.withOpacity(0.1),
                   AppTheme.backgroundColor,
                   AppTheme.surfaceColor,
-                  AppTheme.primaryLight.withOpacity(_backgroundOpacityAnimation.value * 0.05),
+                  AppTheme.primaryLight.withOpacity(0.05),
                 ],
                 stops: const [0.0, 0.3, 0.7, 1.0],
               ),
             ),
             child: SafeArea(
-              child: Stack(
-                children: [
-                  // Floating particles background
-                  ..._buildFloatingParticles(),
-                  
-                  // Main content
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Spacer(flex: 2),
-                        
-                        // Logo section
-                        _buildLogoSection(),
-                        
-                        const SizedBox(height: 48),
-                        
-                        // Text section
-                        _buildTextSection(),
-                        
-                        const Spacer(flex: 2),
-                        
-                        // Progress section
-                        _buildProgressSection(),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // Footer
-                        _buildFooter(),
-                        
-                        const SizedBox(height: 40),
-                      ],
-                    ),
-                  ),
-                ],
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Spacer(flex: 2),
+                    
+                    // Logo section
+                    _buildLogoSection(),
+                    
+                    const SizedBox(height: 48),
+                    
+                    // Text section
+                    _buildTextSection(),
+                    
+                    const Spacer(flex: 2),
+                    
+                    // Progress section
+                    _buildProgressSection(),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Footer
+                    _buildFooter(),
+                    
+                    const SizedBox(height: 40),
+                  ],
+                ),
               ),
             ),
           );
@@ -226,125 +191,57 @@ class _ModernSplashScreenState extends State<ModernSplashScreen>
     );
   }
 
-  List<Widget> _buildFloatingParticles() {
-    return List.generate(6, (index) {
-      final delay = index * 0.5;
-      final duration = 3.0 + (index * 0.3);
-      
-      return AnimatedBuilder(
-        animation: _backgroundController,
-        builder: (context, child) {
-          final progress = (_backgroundController.value + delay) % 1.0;
-          final opacity = _backgroundOpacityAnimation.value * 0.3;
-          
-          return Positioned(
-            left: 50.0 + (index * 60.0),
-            top: 100.0 + (progress * MediaQuery.of(context).size.height),
-            child: Opacity(
-              opacity: opacity * (1.0 - progress),
-              child: Container(
-                width: 8 + (index * 2.0),
-                height: 8 + (index * 2.0),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(50),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryColor.withOpacity(0.4),
-                      blurRadius: 8,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      );
-    });
-  }
-
   Widget _buildLogoSection() {
     return Transform.scale(
       scale: _logoScaleAnimation.value,
-      child: Transform.rotate(
-        angle: _logoRotationAnimation.value,
-        child: Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppTheme.primaryColor,
-                AppTheme.primaryLight,
-                AppTheme.primaryColor.withOpacity(0.8),
-              ],
+      child: Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppTheme.primaryColor,
+              AppTheme.primaryLight,
+              AppTheme.primaryColor.withOpacity(0.8),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryColor.withOpacity(0.3),
+              blurRadius: 30,
+              offset: const Offset(0, 15),
+              spreadRadius: 0,
             ),
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primaryColor.withOpacity(0.3),
-                blurRadius: 30,
-                offset: const Offset(0, 15),
-                spreadRadius: 0,
+            BoxShadow(
+              color: AppTheme.primaryColor.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+              spreadRadius: 5,
+            ),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Background pattern
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
               ),
-              BoxShadow(
-                color: AppTheme.primaryColor.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-                spreadRadius: 5,
-              ),
-            ],
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Background pattern
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-              // Main icon
-              const Icon(
-                Icons.engineering_rounded,
-                size: 50,
-                color: Colors.white,
-              ),
-              // Animated accent dots
-              ...List.generate(3, (index) {
-                final angle = (index * 120.0) * (3.14159 / 180);
-                final radius = 35.0;
-                final x = radius * (angle * 0.1).cos();
-                final y = radius * (angle * 0.1).sin();
-                
-                return Positioned(
-                  left: 60 + x,
-                  top: 60 + y,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.5),
-                          blurRadius: 4,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ],
-          ),
+            ),
+            // Main icon
+            const Icon(
+              Icons.engineering_rounded,
+              size: 50,
+              color: Colors.white,
+            ),
+          ],
         ),
       ),
     );
@@ -573,174 +470,4 @@ class _ModernSplashScreenState extends State<ModernSplashScreen>
       ),
     );
   }
-}
-
-// Enhanced loading widget for use throughout the app
-class ModernLoadingWidget extends StatefulWidget {
-  final double size;
-  final Color? color;
-  final String? message;
-  final Duration duration;
-
-  const ModernLoadingWidget({
-    super.key,
-    this.size = 40.0,
-    this.color,
-    this.message,
-    this.duration = const Duration(milliseconds: 1200),
-  });
-
-  @override
-  State<ModernLoadingWidget> createState() => _ModernLoadingWidgetState();
-}
-
-class _ModernLoadingWidgetState extends State<ModernLoadingWidget>
-    with TickerProviderStateMixin {
-  late AnimationController _spinController;
-  late AnimationController _pulseController;
-  late Animation<double> _spinAnimation;
-  late Animation<double> _pulseAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    
-    _spinController = AnimationController(
-      duration: widget.duration,
-      vsync: this,
-    );
-    
-    _pulseController = AnimationController(
-      duration: Duration(milliseconds: widget.duration.inMilliseconds ~/ 2),
-      vsync: this,
-    );
-
-    _spinAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _spinController,
-      curve: Curves.linear,
-    ));
-
-    _pulseAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.2,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
-
-    _spinController.repeat();
-    _pulseController.repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _spinController.dispose();
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = widget.color ?? AppTheme.primaryColor;
-    
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        AnimatedBuilder(
-          animation: Listenable.merge([_spinController, _pulseController]),
-          builder: (context, child) {
-            return Transform.scale(
-              scale: _pulseAnimation.value,
-              child: Transform.rotate(
-                angle: _spinAnimation.value * 2 * 3.14159,
-                child: Container(
-                  width: widget.size,
-                  height: widget.size,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(widget.size / 2),
-                    gradient: LinearGradient(
-                      colors: [
-                        color,
-                        color.withOpacity(0.3),
-                        color,
-                      ],
-                      stops: const [0.0, 0.5, 1.0],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withOpacity(0.3),
-                        blurRadius: widget.size * 0.3,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: CustomPaint(
-                    painter: ModernLoadingPainter(
-                      color: color,
-                      progress: _spinAnimation.value,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        if (widget.message != null) ...[
-          const SizedBox(height: 20),
-          Text(
-            widget.message!,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class ModernLoadingPainter extends CustomPainter {
-  final Color color;
-  final double progress;
-
-  ModernLoadingPainter({
-    required this.color,
-    required this.progress,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width - 6) / 2;
-
-    // Draw the arc
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -1.5708, // Start from top
-      progress * 2 * 3.14159 * 0.75, // 75% of the circle
-      false,
-      paint,
-    );
-
-    // Draw center dot
-    canvas.drawCircle(
-      center,
-      3,
-      Paint()..color = Colors.white,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

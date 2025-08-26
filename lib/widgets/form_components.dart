@@ -1,9 +1,9 @@
-// lib/widgets/form_components.dart - Enhanced Modern UI
+// lib/widgets/form_components.dart - Complete Enhanced Form Components
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../utils/theme.dart';
 
-class ModernTextField extends StatefulWidget {
+class EnhancedTextField extends StatefulWidget {
   final String? label;
   final String? hint;
   final String? helperText;
@@ -26,7 +26,7 @@ class ModernTextField extends StatefulWidget {
   final ValueChanged<String>? onFieldSubmitted;
   final List<TextInputFormatter>? inputFormatters;
 
-  const ModernTextField({
+  const EnhancedTextField({
     super.key,
     this.label,
     this.hint,
@@ -52,10 +52,11 @@ class ModernTextField extends StatefulWidget {
   });
 
   @override
-  State<ModernTextField> createState() => _ModernTextFieldState();
+  State<EnhancedTextField> createState() => _EnhancedTextFieldState();
 }
 
-class _ModernTextFieldState extends State<ModernTextField> with SingleTickerProviderStateMixin {
+class _EnhancedTextFieldState extends State<EnhancedTextField>
+    with SingleTickerProviderStateMixin {
   late FocusNode _focusNode;
   late AnimationController _animationController;
   late Animation<double> _labelAnimation;
@@ -85,6 +86,11 @@ class _ModernTextFieldState extends State<ModernTextField> with SingleTickerProv
 
     _focusNode.addListener(_onFocusChange);
     widget.controller?.addListener(_onTextChange);
+
+    // Set initial animation state
+    if (_shouldFloatLabel) {
+      _animationController.value = 1.0;
+    }
   }
 
   @override
@@ -120,6 +126,17 @@ class _ModernTextFieldState extends State<ModernTextField> with SingleTickerProv
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (widget.label != null) ...[
+              Text(
+                widget.label!,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: _isFocused ? AppTheme.primaryColor : AppTheme.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.1,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
@@ -154,7 +171,6 @@ class _ModernTextFieldState extends State<ModernTextField> with SingleTickerProv
                   height: 1.4,
                 ),
                 decoration: InputDecoration(
-                  labelText: widget.label,
                   hintText: widget.hint,
                   helperText: widget.helperText,
                   errorText: widget.errorText,
@@ -172,7 +188,7 @@ class _ModernTextFieldState extends State<ModernTextField> with SingleTickerProv
                       : const Color(0xFFF8FAFC),
                   contentPadding: EdgeInsets.symmetric(
                     horizontal: widget.prefixIcon != null ? 12 : 20,
-                    vertical: widget.maxLines == 1 ? 20 : 16,
+                    vertical: widget.maxLines == 1 ? 16 : 16,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -181,7 +197,7 @@ class _ModernTextFieldState extends State<ModernTextField> with SingleTickerProv
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: AppTheme.borderColor.withOpacity(0.3),
+                      color: AppTheme.borderColor.withOpacity(0.5),
                       width: 1,
                     ),
                   ),
@@ -206,12 +222,6 @@ class _ModernTextFieldState extends State<ModernTextField> with SingleTickerProv
                       width: 2,
                     ),
                   ),
-                  labelStyle: TextStyle(
-                    color: _isFocused
-                        ? AppTheme.primaryColor
-                        : AppTheme.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
                   hintStyle: TextStyle(
                     color: AppTheme.textTertiary,
                     fontWeight: FontWeight.w400,
@@ -230,7 +240,7 @@ class _ModernTextFieldState extends State<ModernTextField> with SingleTickerProv
   }
 }
 
-class ModernDropdownField<T> extends StatefulWidget {
+class EnhancedDropdownField<T> extends StatefulWidget {
   final String? label;
   final String? hint;
   final String? helperText;
@@ -242,7 +252,7 @@ class ModernDropdownField<T> extends StatefulWidget {
   final Widget? prefixIcon;
   final FormFieldValidator<T>? validator;
 
-  const ModernDropdownField({
+  const EnhancedDropdownField({
     super.key,
     this.label,
     this.hint,
@@ -257,10 +267,10 @@ class ModernDropdownField<T> extends StatefulWidget {
   });
 
   @override
-  State<ModernDropdownField<T>> createState() => _ModernDropdownFieldState<T>();
+  State<EnhancedDropdownField<T>> createState() => _EnhancedDropdownFieldState<T>();
 }
 
-class _ModernDropdownFieldState<T> extends State<ModernDropdownField<T>> {
+class _EnhancedDropdownFieldState<T> extends State<EnhancedDropdownField<T>> {
   final FocusNode _focusNode = FocusNode();
   bool _isFocused = false;
 
@@ -289,7 +299,7 @@ class _ModernDropdownFieldState<T> extends State<ModernDropdownField<T>> {
           Text(
             widget.label!,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: AppTheme.textPrimary,
+              color: _isFocused ? AppTheme.primaryColor : AppTheme.textSecondary,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.1,
             ),
@@ -340,7 +350,7 @@ class _ModernDropdownFieldState<T> extends State<ModernDropdownField<T>> {
               fillColor: _isFocused ? Colors.white : const Color(0xFFF8FAFC),
               contentPadding: EdgeInsets.symmetric(
                 horizontal: widget.prefixIcon != null ? 12 : 20,
-                vertical: 20,
+                vertical: 16,
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -349,7 +359,7 @@ class _ModernDropdownFieldState<T> extends State<ModernDropdownField<T>> {
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
-                  color: AppTheme.borderColor.withOpacity(0.3),
+                  color: AppTheme.borderColor.withOpacity(0.5),
                   width: 1,
                 ),
               ),
@@ -384,70 +394,264 @@ class _ModernDropdownFieldState<T> extends State<ModernDropdownField<T>> {
   }
 }
 
-class ModernCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry? padding;
-  final EdgeInsetsGeometry? margin;
-  final VoidCallback? onTap;
-  final Color? backgroundColor;
-  final bool hasShadow;
-  final double borderRadius;
+class EnhancedDateField extends StatelessWidget {
+  final String? label;
+  final String? hint;
+  final String? helperText;
+  final DateTime? selectedDate;
+  final ValueChanged<DateTime>? onDateSelected;
+  final bool enabled;
+  final Widget? prefixIcon;
+  final FormFieldValidator<DateTime>? validator;
+  final DateTime? firstDate;
+  final DateTime? lastDate;
 
-  const ModernCard({
+  const EnhancedDateField({
     super.key,
-    required this.child,
-    this.padding,
-    this.margin,
-    this.onTap,
-    this.backgroundColor,
-    this.hasShadow = true,
-    this.borderRadius = 16,
+    this.label,
+    this.hint,
+    this.helperText,
+    this.selectedDate,
+    this.onDateSelected,
+    this.enabled = true,
+    this.prefixIcon,
+    this.validator,
+    this.firstDate,
+    this.lastDate,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: margin ?? const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: backgroundColor ?? Colors.white,
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: AppTheme.borderColor.withOpacity(0.1),
-          width: 0.5,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (label != null) ...[
+          Text(
+            label!,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: AppTheme.textSecondary,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.1,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        FormField<DateTime>(
+          initialValue: selectedDate,
+          validator: validator,
+          builder: (FormFieldState<DateTime> state) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: enabled ? () => _selectDate(context, state) : null,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: state.hasError 
+                            ? AppTheme.errorColor 
+                            : AppTheme.borderColor.withOpacity(0.5),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        if (prefixIcon != null) ...[
+                          prefixIcon!,
+                          const SizedBox(width: 12),
+                        ] else ...[
+                          Icon(
+                            Icons.calendar_today,
+                            color: AppTheme.textSecondary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        Expanded(
+                          child: Text(
+                            selectedDate != null
+                                ? _formatDate(selectedDate!)
+                                : hint ?? 'Pilih tanggal',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: selectedDate != null
+                                  ? AppTheme.textPrimary
+                                  : AppTheme.textTertiary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (state.hasError) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    state.errorText!,
+                    style: const TextStyle(
+                      color: AppTheme.errorColor,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+                if (helperText != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    helperText!,
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
         ),
-        boxShadow: hasShadow
-            ? [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                  spreadRadius: 0,
+      ],
+    );
+  }
+
+  Future<void> _selectDate(BuildContext context, FormFieldState<DateTime> state) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate ?? DateTime.now(),
+      firstDate: firstDate ?? DateTime(2020),
+      lastDate: lastDate ?? DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: AppTheme.primaryColor,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: AppTheme.textPrimary,
+            ),
+            dialogBackgroundColor: Colors.white,
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      state.didChange(picked);
+      onDateSelected?.call(picked);
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+}
+
+class EnhancedSliderField extends StatelessWidget {
+  final String? label;
+  final String? helperText;
+  final double value;
+  final double min;
+  final double max;
+  final int? divisions;
+  final ValueChanged<double>? onChanged;
+  final String Function(double)? labelBuilder;
+
+  const EnhancedSliderField({
+    super.key,
+    this.label,
+    this.helperText,
+    required this.value,
+    required this.min,
+    required this.max,
+    this.divisions,
+    this.onChanged,
+    this.labelBuilder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (label != null) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label!,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w600,
                 ),
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                  spreadRadius: 0,
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-              ]
-            : null,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(borderRadius),
-          child: Padding(
-            padding: padding ?? const EdgeInsets.all(20),
-            child: child,
+                child: Text(
+                  labelBuilder?.call(value) ?? value.toStringAsFixed(0),
+                  style: TextStyle(
+                    color: AppTheme.primaryColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: AppTheme.primaryColor,
+            inactiveTrackColor: AppTheme.borderColor,
+            thumbColor: AppTheme.primaryColor,
+            overlayColor: AppTheme.primaryColor.withOpacity(0.1),
+            valueIndicatorColor: AppTheme.primaryColor,
+            valueIndicatorTextStyle: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+            trackHeight: 6,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
+            activeTickMarkColor: Colors.transparent,
+            inactiveTickMarkColor: Colors.transparent,
+          ),
+          child: Slider(
+            value: value,
+            min: min,
+            max: max,
+            divisions: divisions,
+            onChanged: onChanged,
+            label: labelBuilder?.call(value) ?? value.toStringAsFixed(0),
           ),
         ),
-      ),
+        if (helperText != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            helperText!,
+            style: TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
 
-class ModernSection extends StatelessWidget {
+class FormSection extends StatelessWidget {
   final String? title;
   final String? subtitle;
   final List<Widget> children;
@@ -455,7 +659,7 @@ class ModernSection extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final bool showDivider;
 
-  const ModernSection({
+  const FormSection({
     super.key,
     this.title,
     this.subtitle,
@@ -472,7 +676,7 @@ class ModernSection extends StatelessWidget {
       children: [
         if (title != null) ...[
           Padding(
-            padding: padding ?? const EdgeInsets.symmetric(horizontal: 20),
+            padding: padding ?? EdgeInsets.zero,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -525,7 +729,7 @@ class ModernSection extends StatelessWidget {
   }
 }
 
-class ModernButton extends StatefulWidget {
+class EnhancedButton extends StatefulWidget {
   final String text;
   final VoidCallback? onPressed;
   final Widget? icon;
@@ -536,8 +740,9 @@ class ModernButton extends StatefulWidget {
   final EdgeInsetsGeometry? padding;
   final double borderRadius;
   final double elevation;
+  final double? width;
 
-  const ModernButton({
+  const EnhancedButton({
     super.key,
     required this.text,
     this.onPressed,
@@ -549,13 +754,15 @@ class ModernButton extends StatefulWidget {
     this.padding,
     this.borderRadius = 12,
     this.elevation = 0,
+    this.width,
   });
 
   @override
-  State<ModernButton> createState() => _ModernButtonState();
+  State<EnhancedButton> createState() => _EnhancedButtonState();
 }
 
-class _ModernButtonState extends State<ModernButton> with SingleTickerProviderStateMixin {
+class _EnhancedButtonState extends State<EnhancedButton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
@@ -590,7 +797,7 @@ class _ModernButtonState extends State<ModernButton> with SingleTickerProviderSt
         return Transform.scale(
           scale: _scaleAnimation.value,
           child: Container(
-            width: double.infinity,
+            width: widget.width ?? double.infinity,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(widget.borderRadius),
               boxShadow: widget.elevation > 0 && !widget.isOutlined
@@ -658,6 +865,69 @@ class _ModernButtonState extends State<ModernButton> with SingleTickerProviderSt
           ),
         );
       },
+    );
+  }
+}
+
+class ModernCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final VoidCallback? onTap;
+  final Color? backgroundColor;
+  final bool hasShadow;
+  final double borderRadius;
+
+  const ModernCard({
+    super.key,
+    required this.child,
+    this.padding,
+    this.margin,
+    this.onTap,
+    this.backgroundColor,
+    this.hasShadow = true,
+    this.borderRadius = 16,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: margin ?? const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: backgroundColor ?? Colors.white,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(
+          color: AppTheme.borderColor.withOpacity(0.1),
+          width: 0.5,
+        ),
+        boxShadow: hasShadow
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                  spreadRadius: 0,
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                  spreadRadius: 0,
+                ),
+              ]
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: Padding(
+            padding: padding ?? const EdgeInsets.all(20),
+            child: child,
+          ),
+        ),
+      ),
     );
   }
 }
