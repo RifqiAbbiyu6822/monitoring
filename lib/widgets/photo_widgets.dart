@@ -1,11 +1,44 @@
-// lib/widgets/photo_widgets.dart
+// lib/widgets/photo_widgets.dart - Enhanced with Progress Tracking
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/photo_service.dart';
 import '../utils/theme.dart';
+import '../utils/date_formatter.dart';
 
-// Widget untuk menampilkan grid foto
-class PhotoGridWidget extends StatelessWidget {
+// Model for progress photos with metadata
+class ProgressPhotoItem {
+  final String photoPath;
+  final double progress;
+  final String description;
+  final DateTime timestamp;
+  final String? notes;
+
+  ProgressPhotoItem({
+    required this.photoPath,
+    required this.progress,
+    required this.description,
+    required this.timestamp,
+    this.notes,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'photoPath': photoPath,
+    'progress': progress,
+    'description': description,
+    'timestamp': timestamp.toIso8601String(),
+    'notes': notes,
+  };
+
+  factory ProgressPhotoItem.fromJson(Map<String, dynamic> json) => ProgressPhotoItem(
+    photoPath: json['photoPath'],
+    progress: json['progress'],
+    description: json['description'],
+    timestamp: DateTime.parse(json['timestamp']),
+    notes: json['notes'],
+  );
+}
+
+class ModernPhotoGrid extends StatelessWidget {
   final List<String> photos;
   final VoidCallback? onAddPhoto;
   final Function(String)? onDeletePhoto;
@@ -13,8 +46,9 @@ class PhotoGridWidget extends StatelessWidget {
   final bool canEdit;
   final int maxPhotos;
   final String emptyMessage;
+  final String title;
 
-  const PhotoGridWidget({
+  const ModernPhotoGrid({
     super.key,
     required this.photos,
     this.onAddPhoto,
@@ -23,6 +57,7 @@ class PhotoGridWidget extends StatelessWidget {
     this.canEdit = true,
     this.maxPhotos = 5,
     this.emptyMessage = 'Belum ada foto',
+    this.title = 'Foto',
   });
 
   @override
@@ -30,169 +65,215 @@ class PhotoGridWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (photos.isEmpty) ...[
-          Container(
-            constraints: const BoxConstraints(
-              minHeight: 120,
-              maxHeight: 200,
-            ),
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppTheme.backgroundColor,
-              borderRadius: BorderRadius.circular(AppTheme.radius12),
-              border: Border.all(color: AppTheme.borderColor, style: BorderStyle.solid),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+        // Header with count
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
               children: [
-                Icon(
-                  Icons.photo_library_outlined,
-                  size: 32,
-                  color: AppTheme.textTertiary,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.photo_library_outlined,
+                    size: 16,
+                    color: AppTheme.primaryColor,
+                  ),
                 ),
-                const SizedBox(height: AppTheme.spacing8),
+                const SizedBox(width: 12),
                 Text(
-                  emptyMessage,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textSecondary,
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
                   ),
-                  textAlign: TextAlign.center,
                 ),
-                if (canEdit && onAddPhoto != null) ...[
-                  const SizedBox(height: AppTheme.spacing12),
-                  ElevatedButton.icon(
-                    onPressed: onAddPhoto,
-                    icon: const Icon(Icons.add_a_photo, size: 16),
-                    label: const Text('Tambah Foto'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppTheme.spacing16,
-                        vertical: AppTheme.spacing8,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
-          ),
-        ] else ...[
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: AppTheme.spacing8,
-              mainAxisSpacing: AppTheme.spacing8,
-              childAspectRatio: 1.0,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: photos.length >= maxPhotos
+                    ? AppTheme.warningColor.withOpacity(0.1)
+                    : AppTheme.infoColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: photos.length >= maxPhotos
+                      ? AppTheme.warningColor.withOpacity(0.3)
+                      : AppTheme.infoColor.withOpacity(0.3),
+                  width: 0.5,
+                ),
+              ),
+              child: Text(
+                '${photos.length}/$maxPhotos',
+                style: TextStyle(
+                  color: photos.length >= maxPhotos
+                      ? AppTheme.warningColor
+                      : AppTheme.infoColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-            itemCount: photos.length + (canEdit && photos.length < maxPhotos ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index < photos.length) {
-                return _buildPhotoItem(context, photos[index], index);
-              } else {
-                return _buildAddPhotoButton(context);
-              }
-            },
-          ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        
+        // Photo grid or empty state
+        if (photos.isEmpty) ...[
+          _buildEmptyState(context),
+        ] else ...[
+          _buildPhotoGrid(context),
         ],
       ],
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Container(
+      height: 160,
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.borderColor.withOpacity(0.3),
+          width: 1,
+          style: BorderStyle.solid,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.textTertiary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.photo_camera_outlined,
+              size: 32,
+              color: AppTheme.textTertiary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            emptyMessage,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tambahkan foto untuk dokumentasi yang lebih baik',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTheme.textTertiary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (canEdit && onAddPhoto != null) ...[
+            const SizedBox(height: 20),
+            OutlinedButton.icon(
+              onPressed: onAddPhoto,
+              icon: const Icon(Icons.add_a_photo, size: 18),
+              label: const Text('Tambah Foto'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhotoGrid(BuildContext context) {
+    final itemCount = photos.length + (canEdit && photos.length < maxPhotos ? 1 : 0);
+    
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.0,
+      ),
+      itemCount: itemCount,
+      itemBuilder: (context, index) {
+        if (index < photos.length) {
+          return _buildPhotoItem(context, photos[index], index);
+        } else {
+          return _buildAddPhotoButton(context);
+        }
+      },
     );
   }
 
   Widget _buildPhotoItem(BuildContext context, String photoPath, int index) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppTheme.radius8),
-        border: Border.all(color: AppTheme.borderColor),
-        boxShadow: AppTheme.shadowSm,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppTheme.radius8),
+        borderRadius: BorderRadius.circular(12),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Photo Image
+            // Photo
             GestureDetector(
               onTap: () => onViewPhoto?.call(photoPath),
               child: File(photoPath).existsSync()
                   ? Image.file(
                       File(photoPath),
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: AppTheme.backgroundColor,
-                          child: const Icon(
-                            Icons.broken_image,
-                            color: AppTheme.textTertiary,
-                          ),
-                        );
-                      },
+                      errorBuilder: (context, error, stackTrace) => _buildErrorPhoto(),
                     )
-                  : Container(
-                      color: AppTheme.backgroundColor,
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        color: AppTheme.textTertiary,
-                      ),
-                    ),
+                  : _buildErrorPhoto(),
             ),
             
-            // Photo actions overlay
-            if (canEdit)
-              Positioned(
-                top: 4,
-                right: 4,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(AppTheme.radius4),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        onPressed: () => onViewPhoto?.call(photoPath),
-                        icon: const Icon(
-                          Icons.visibility,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(
-                          minWidth: 24,
-                          minHeight: 24,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => _showDeleteConfirmation(context, photoPath),
-                        icon: const Icon(
-                          Icons.delete,
-                          color: Colors.red,
-                          size: 16,
-                        ),
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(
-                          minWidth: 24,
-                          minHeight: 24,
-                        ),
-                      ),
-                    ],
-                  ),
+            // Overlay gradient
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.3),
+                  ],
+                  stops: const [0.7, 1.0],
                 ),
               ),
+            ),
             
-            // Photo index
+            // Photo number
             Positioned(
-              bottom: 4,
-              left: 4,
+              bottom: 8,
+              left: 8,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 2,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(AppTheme.radius4),
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 0.5,
+                  ),
                 ),
                 child: Text(
                   '${index + 1}',
@@ -204,38 +285,118 @@ class PhotoGridWidget extends StatelessWidget {
                 ),
               ),
             ),
+            
+            // Action buttons
+            if (canEdit)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: () => onViewPhoto?.call(photoPath),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          child: const Icon(
+                            Icons.visibility_outlined,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => _showDeleteConfirmation(context, photoPath),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          child: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.red,
+                            size: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildErrorPhoto() {
+    return Container(
+      color: AppTheme.backgroundColor,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.broken_image_outlined,
+            color: AppTheme.textTertiary,
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Error',
+            style: TextStyle(
+              color: AppTheme.textTertiary,
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAddPhotoButton(BuildContext context) {
-    return GestureDetector(
-      onTap: onAddPhoto,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppTheme.backgroundColor,
-          borderRadius: BorderRadius.circular(AppTheme.radius8),
-          border: Border.all(color: AppTheme.borderColor, style: BorderStyle.solid),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppTheme.primaryColor.withOpacity(0.2),
+          width: 1.5,
+          style: BorderStyle.solid,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.add_a_photo,
-              color: AppTheme.primaryColor,
-              size: 24,
-            ),
-            const SizedBox(height: AppTheme.spacing4),
-            Text(
-              'Tambah',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.primaryColor,
-                fontWeight: FontWeight.w500,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onAddPhoto,
+          borderRadius: BorderRadius.circular(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.add_photo_alternate_outlined,
+                  color: AppTheme.primaryColor,
+                  size: 20,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                'Tambah',
+                style: TextStyle(
+                  color: AppTheme.primaryColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -245,8 +406,15 @@ class PhotoGridWidget extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Foto'),
-        content: const Text('Apakah Anda yakin ingin menghapus foto ini?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.delete_outline, color: AppTheme.errorColor),
+            const SizedBox(width: 12),
+            const Text('Hapus Foto'),
+          ],
+        ),
+        content: const Text('Apakah Anda yakin ingin menghapus foto ini? Tindakan ini tidak dapat dibatalkan.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -259,6 +427,7 @@ class PhotoGridWidget extends StatelessWidget {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.errorColor,
+              foregroundColor: Colors.white,
             ),
             child: const Text('Hapus'),
           ),
@@ -268,232 +437,360 @@ class PhotoGridWidget extends StatelessWidget {
   }
 }
 
-// Widget untuk memilih dan mengelola foto
-class PhotoPickerWidget extends StatefulWidget {
-  final List<String> initialPhotos;
-  final Function(List<String>) onPhotosChanged;
-  final int maxPhotos;
+// Enhanced Progress Photo Widget with detailed tracking
+class ProgressPhotoWidget extends StatelessWidget {
+  final List<ProgressPhotoItem> progressPhotos;
   final String title;
-  final String subtitle;
+  final String emptyMessage;
 
-  const PhotoPickerWidget({
+  const ProgressPhotoWidget({
     super.key,
-    required this.initialPhotos,
-    required this.onPhotosChanged,
-    this.maxPhotos = 5,
-    this.title = 'Foto',
-    this.subtitle = 'Pilih foto untuk ditambahkan',
+    required this.progressPhotos,
+    this.title = 'Progress Pekerjaan',
+    this.emptyMessage = 'Belum ada foto progress',
   });
 
   @override
-  State<PhotoPickerWidget> createState() => _PhotoPickerWidgetState();
-}
-
-class _PhotoPickerWidgetState extends State<PhotoPickerWidget> {
-  late List<String> _photos;
-  final PhotoService _photoService = PhotoService();
-
-  @override
-  void initState() {
-    super.initState();
-    _photos = List.from(widget.initialPhotos);
-  }
-
-  Future<void> _addPhoto() async {
-    if (_photos.length >= widget.maxPhotos) {
-      _showMaxPhotosDialog();
-      return;
-    }
-
-    final result = await showModalBottomSheet<String>(
-      context: context,
-      builder: (context) => _buildPhotoSourceBottomSheet(),
-    );
-
-    if (result != null) {
-      String? photoPath;
-      
-      try {
-        if (result == 'camera') {
-          photoPath = await _photoService.takePhoto();
-        } else if (result == 'gallery') {
-          photoPath = await _photoService.pickFromGallery();
-        }
-
-                 if (photoPath != null && photoPath.isNotEmpty) {
-           setState(() {
-             _photos.add(photoPath!);
-           });
-           widget.onPhotosChanged(_photos);
-         }
-      } catch (e) {
-        _showErrorSnackBar('Gagal menambahkan foto: $e');
-      }
-    }
-  }
-
-  void _deletePhoto(String photoPath) {
-    setState(() {
-      _photos.remove(photoPath);
-    });
-    widget.onPhotosChanged(_photos);
-  }
-
-  void _viewPhoto(String photoPath) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PhotoViewerScreen(photoPath: photoPath),
-      ),
-    );
-  }
-
-  Widget _buildPhotoSourceBottomSheet() {
-    return Container(
-      padding: const EdgeInsets.all(AppTheme.spacing20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Pilih Sumber Foto',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppTheme.spacing20),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.pop(context, 'camera'),
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text('Kamera'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing16),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppTheme.spacing16),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.pop(context, 'gallery'),
-                  icon: const Icon(Icons.photo_library),
-                  label: const Text('Galeri'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing16),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppTheme.spacing16),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showMaxPhotosDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Batas Foto'),
-        content: Text('Maksimal ${widget.maxPhotos} foto yang dapat ditambahkan.'),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppTheme.errorColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radius12),
-        ),
-      ),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
+    if (progressPhotos.isEmpty) {
+      return _buildEmptyState(context);
+    }
+
+    // Sort by progress percentage
+    final sortedPhotos = List<ProgressPhotoItem>.from(progressPhotos)
+      ..sort((a, b) => a.progress.compareTo(b.progress));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.timeline,
+                size: 16,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
                 ),
-                Text(
-                  widget.subtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ],
+              ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppTheme.spacing8,
-                vertical: AppTheme.spacing4,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: _photos.length >= widget.maxPhotos 
-                    ? AppTheme.errorColor.withOpacity(0.1)
-                    : AppTheme.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppTheme.radius8),
+                color: AppTheme.successColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '${_photos.length}/${widget.maxPhotos}',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: _photos.length >= widget.maxPhotos 
-                      ? AppTheme.errorColor
-                      : AppTheme.primaryColor,
+                '${sortedPhotos.length} update',
+                style: TextStyle(
+                  color: AppTheme.successColor,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: AppTheme.spacing16),
-        PhotoGridWidget(
-          photos: _photos,
-          onAddPhoto: _photos.length < widget.maxPhotos ? _addPhoto : null,
-          onDeletePhoto: _deletePhoto,
-          onViewPhoto: _viewPhoto,
-          maxPhotos: widget.maxPhotos,
-          emptyMessage: 'Tambahkan foto untuk dokumentasi',
+        const SizedBox(height: 16),
+        
+        // Timeline view
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: sortedPhotos.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 16),
+          itemBuilder: (context, index) {
+            final item = sortedPhotos[index];
+            final isLast = index == sortedPhotos.length - 1;
+            return _buildProgressItem(context, item, isLast);
+          },
         ),
       ],
     );
   }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.borderColor.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.textTertiary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.timeline_outlined,
+              size: 32,
+              color: AppTheme.textTertiary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            emptyMessage,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Progress foto akan muncul di sini saat pekerjaan berjalan',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTheme.textTertiary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressItem(BuildContext context, ProgressPhotoItem item, bool isLast) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.borderColor.withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Progress indicator
+            Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: _getProgressColor(item.progress).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _getProgressColor(item.progress),
+                      width: 2,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${item.progress.toInt()}%',
+                      style: TextStyle(
+                        color: _getProgressColor(item.progress),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                if (!isLast) ...[
+                  Container(
+                    width: 2,
+                    height: 40,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.borderColor.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(1),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(width: 16),
+            
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.description,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getProgressColor(item.progress).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          _getProgressStatus(item.progress),
+                          style: TextStyle(
+                            color: _getProgressColor(item.progress),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // Timestamp
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.schedule_outlined,
+                        size: 14,
+                        color: AppTheme.textSecondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        DateFormatter.formatDateTime(item.timestamp),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Photo
+                  if (File(item.photoPath).existsSync()) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: GestureDetector(
+                        onTap: () => _viewPhoto(context, item),
+                        child: Stack(
+                          children: [
+                            Image.file(
+                              File(item.photoPath),
+                              width: double.infinity,
+                              height: 120,
+                              fit: BoxFit.cover,
+                            ),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.7),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(
+                                  Icons.zoom_in,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  
+                  // Notes
+                  if (item.notes != null && item.notes!.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.backgroundColor,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppTheme.borderColor.withOpacity(0.3),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Text(
+                        item.notes!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textSecondary,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getProgressColor(double progress) {
+    if (progress <= 25) return AppTheme.warningColor;
+    if (progress <= 50) return AppTheme.infoColor;
+    if (progress <= 75) return AppTheme.primaryColor;
+    return AppTheme.successColor;
+  }
+
+  String _getProgressStatus(double progress) {
+    if (progress <= 25) return 'Mulai';
+    if (progress <= 50) return 'Progress';
+    if (progress <= 75) return 'Lanjut';
+    if (progress < 100) return 'Hampir';
+    return 'Selesai';
+  }
+
+  void _viewPhoto(BuildContext context, ProgressPhotoItem item) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black87,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return FadeTransition(
+            opacity: animation,
+            child: ProgressPhotoViewer(item: item),
+          );
+        },
+      ),
+    );
+  }
 }
 
-// Widget untuk menampilkan foto dalam layar penuh
-class PhotoViewerScreen extends StatelessWidget {
-  final String photoPath;
+// Full-screen photo viewer with progress details
+class ProgressPhotoViewer extends StatelessWidget {
+  final ProgressPhotoItem item;
 
-  const PhotoViewerScreen({
+  const ProgressPhotoViewer({
     super.key,
-    required this.photoPath,
+    required this.item,
   });
 
   @override
@@ -501,432 +798,121 @@ class PhotoViewerScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Lihat Foto',
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
-      body: Center(
-        child: File(photoPath).existsSync()
-            ? Image.file(
-                File(photoPath),
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.broken_image,
-                        color: Colors.white,
-                        size: 64,
-                      ),
-                      SizedBox(height: AppTheme.spacing16),
-                      Text(
-                        'Gagal memuat foto',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ],
-                  );
-                },
-              )
-            : const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.image_not_supported,
-                    color: Colors.white,
-                    size: 64,
-                  ),
-                  SizedBox(height: AppTheme.spacing16),
-                  Text(
-                    'Foto tidak ditemukan',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
-}
-
-// Widget untuk menampilkan foto dalam mode view-only (untuk detail temuan)
-class PhotoViewerWidget extends StatelessWidget {
-  final List<String> photos;
-  final String title;
-  final String emptyMessage;
-
-  const PhotoViewerWidget({
-    super.key,
-    required this.photos,
-    this.title = 'Foto',
-    this.emptyMessage = 'Tidak ada foto',
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (photos.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(AppTheme.spacing16),
-        decoration: BoxDecoration(
-          color: AppTheme.backgroundColor,
-          borderRadius: BorderRadius.circular(AppTheme.radius12),
-          border: Border.all(color: AppTheme.borderColor),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              Icons.photo_library_outlined,
-              size: 48,
-              color: AppTheme.textTertiary,
-            ),
-            const SizedBox(height: AppTheme.spacing12),
-            Text(
-              emptyMessage,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              Icons.photo_library,
-              size: 20,
-              color: AppTheme.primaryColor,
-            ),
-            const SizedBox(width: AppTheme.spacing8),
-            Text(
-              '$title (${photos.length})',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppTheme.spacing12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: AppTheme.spacing8,
-            mainAxisSpacing: AppTheme.spacing8,
-            childAspectRatio: 1.0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          'Progress ${item.progress.toInt()}%',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
           ),
-          itemCount: photos.length,
-          itemBuilder: (context, index) {
-            return _buildPhotoItem(context, photos[index], index);
-          },
         ),
-      ],
-    );
-  }
-
-  Widget _buildPhotoItem(BuildContext context, String photoPath, int index) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppTheme.radius8),
-        border: Border.all(color: AppTheme.borderColor),
-        boxShadow: AppTheme.shadowSm,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppTheme.radius8),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Photo Image
-            GestureDetector(
-              onTap: () => _viewPhoto(context, photoPath),
-              child: File(photoPath).existsSync()
-                  ? Image.file(
-                      File(photoPath),
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: AppTheme.backgroundColor,
-                          child: const Icon(
-                            Icons.broken_image,
-                            color: AppTheme.textTertiary,
-                          ),
-                        );
-                      },
-                    )
-                  : Container(
-                      color: AppTheme.backgroundColor,
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        color: AppTheme.textTertiary,
+      body: Column(
+        children: [
+          // Photo
+          Expanded(
+            child: Center(
+              child: InteractiveViewer(
+                child: File(item.photoPath).existsSync()
+                    ? Image.file(
+                        File(item.photoPath),
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.broken_image, color: Colors.white, size: 64),
+                              SizedBox(height: 16),
+                              Text('Gagal memuat foto', style: TextStyle(color: Colors.white)),
+                            ],
+                          );
+                        },
+                      )
+                    : const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.image_not_supported, color: Colors.white, size: 64),
+                          SizedBox(height: 16),
+                          Text('Foto tidak ditemukan', style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+          
+          // Details panel
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: const BoxDecoration(
+              color: Colors.black87,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Progress indicator
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        '${item.progress.toInt()}% Complete',
+                        style: TextStyle(
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
-            ),
-            
-            // Photo index
-            Positioned(
-              bottom: 4,
-              left: 4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 2,
+                    const Spacer(),
+                    Text(
+                      DateFormatter.formatDateTime(item.timestamp),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(AppTheme.radius4),
-                ),
-                child: Text(
-                  '${index + 1}',
+                const SizedBox(height: 16),
+                
+                // Description
+                Text(
+                  item.description,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 12,
+                    fontSize: 18,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-            ),
-            
-            // View icon overlay
-            Positioned(
-              top: 4,
-              right: 4,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(AppTheme.radius4),
-                ),
-                child: const Icon(
-                  Icons.visibility,
-                  color: Colors.white,
-                  size: 16,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _viewPhoto(BuildContext context, String photoPath) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PhotoViewerScreen(photoPath: photoPath),
-      ),
-    );
-  }
-}
-
-// Widget untuk menampilkan foto progress dengan informasi tambahan
-class ProgressPhotoViewerWidget extends StatelessWidget {
-  final List<String> photos;
-  final String title;
-  final String emptyMessage;
-  final List<Map<String, dynamic>>? photoMetadata; // Optional metadata for each photo
-
-  const ProgressPhotoViewerWidget({
-    super.key,
-    required this.photos,
-    this.title = 'Foto Progress',
-    this.emptyMessage = 'Tidak ada foto progress',
-    this.photoMetadata,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (photos.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(AppTheme.spacing16),
-        decoration: BoxDecoration(
-          color: AppTheme.backgroundColor,
-          borderRadius: BorderRadius.circular(AppTheme.radius12),
-          border: Border.all(color: AppTheme.borderColor),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              Icons.timeline,
-              size: 48,
-              color: AppTheme.textTertiary,
-            ),
-            const SizedBox(height: AppTheme.spacing12),
-            Text(
-              emptyMessage,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              Icons.timeline,
-              size: 20,
-              color: AppTheme.primaryColor,
-            ),
-            const SizedBox(width: AppTheme.spacing8),
-            Text(
-              '$title (${photos.length})',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppTheme.spacing12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: AppTheme.spacing8,
-            mainAxisSpacing: AppTheme.spacing8,
-            childAspectRatio: 0.8,
-          ),
-          itemCount: photos.length,
-          itemBuilder: (context, index) {
-            return _buildProgressPhotoItem(context, photos[index], index);
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProgressPhotoItem(BuildContext context, String photoPath, int index) {
-    final metadata = photoMetadata != null && index < photoMetadata!.length 
-        ? photoMetadata![index] 
-        : null;
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppTheme.radius12),
-        border: Border.all(color: AppTheme.borderColor),
-        boxShadow: AppTheme.shadowSm,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppTheme.radius12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Photo Image
-            Expanded(
-              child: GestureDetector(
-                onTap: () => _viewPhoto(context, photoPath),
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: AppTheme.backgroundColor,
+                
+                // Notes
+                if (item.notes != null && item.notes!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    item.notes!,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
                   ),
-                  child: File(photoPath).existsSync()
-                      ? Image.file(
-                          File(photoPath),
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: AppTheme.backgroundColor,
-                              child: const Icon(
-                                Icons.broken_image,
-                                color: AppTheme.textTertiary,
-                              ),
-                            );
-                          },
-                        )
-                      : Container(
-                          color: AppTheme.backgroundColor,
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            color: AppTheme.textTertiary,
-                          ),
-                        ),
-                ),
-              ),
+                ],
+              ],
             ),
-            
-            // Metadata section
-            if (metadata != null) ...[
-              Container(
-                padding: const EdgeInsets.all(AppTheme.spacing8),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceColor,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (metadata['date'] != null)
-                      Text(
-                        metadata['date'],
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppTheme.textSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    if (metadata['progress'] != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: LinearProgressIndicator(
-                              value: metadata['progress'] / 100,
-                              backgroundColor: AppTheme.borderColor,
-                              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          const SizedBox(width: AppTheme.spacing8),
-                          Text(
-                            '${metadata['progress']}%',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppTheme.primaryColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (metadata['description'] != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        metadata['description'],
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppTheme.textPrimary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _viewPhoto(BuildContext context, String photoPath) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PhotoViewerScreen(photoPath: photoPath),
+          ),
+        ],
       ),
     );
   }

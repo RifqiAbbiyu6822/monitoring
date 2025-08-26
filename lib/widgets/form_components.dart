@@ -1,7 +1,9 @@
+// lib/widgets/form_components.dart - Enhanced Modern UI
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../utils/theme.dart';
 
-class EnhancedTextField extends StatelessWidget {
+class ModernTextField extends StatefulWidget {
   final String? label;
   final String? hint;
   final String? helperText;
@@ -22,8 +24,9 @@ class EnhancedTextField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final VoidCallback? onEditingComplete;
   final ValueChanged<String>? onFieldSubmitted;
+  final List<TextInputFormatter>? inputFormatters;
 
-  const EnhancedTextField({
+  const ModernTextField({
     super.key,
     this.label,
     this.hint,
@@ -45,57 +48,192 @@ class EnhancedTextField extends StatelessWidget {
     this.textInputAction,
     this.onEditingComplete,
     this.onFieldSubmitted,
+    this.inputFormatters,
   });
 
   @override
+  State<ModernTextField> createState() => _ModernTextFieldState();
+}
+
+class _ModernTextFieldState extends State<ModernTextField> with SingleTickerProviderStateMixin {
+  late FocusNode _focusNode;
+  late AnimationController _animationController;
+  late Animation<double> _labelAnimation;
+  late Animation<Color?> _borderColorAnimation;
+
+  bool get _hasText => widget.controller?.text.isNotEmpty ?? false;
+  bool get _isFocused => _focusNode.hasFocus;
+  bool get _shouldFloatLabel => _isFocused || _hasText;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = widget.focusNode ?? FocusNode();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+
+    _labelAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
+    _borderColorAnimation = ColorTween(
+      begin: AppTheme.borderColor,
+      end: AppTheme.primaryColor,
+    ).animate(_animationController);
+
+    _focusNode.addListener(_onFocusChange);
+    widget.controller?.addListener(_onTextChange);
+  }
+
+  @override
+  void dispose() {
+    if (widget.focusNode == null) _focusNode.dispose();
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (_isFocused || _hasText) {
+      _animationController.forward();
+    } else {
+      _animationController.reverse();
+    }
+    setState(() {});
+  }
+
+  void _onTextChange() {
+    final shouldAnimate = _hasText || _isFocused;
+    if (shouldAnimate && !_animationController.isCompleted) {
+      _animationController.forward();
+    } else if (!shouldAnimate && _animationController.isCompleted) {
+      _animationController.reverse();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (label != null) ...[
-          Text(
-            label!,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppTheme.textPrimary,
-              fontWeight: FontWeight.w600,
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: _isFocused
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        )
+                      ]
+                    : null,
+              ),
+              child: TextFormField(
+                controller: widget.controller,
+                focusNode: _focusNode,
+                keyboardType: widget.keyboardType,
+                obscureText: widget.obscureText,
+                maxLines: widget.maxLines,
+                maxLength: widget.maxLength,
+                enabled: widget.enabled,
+                onTap: widget.onTap,
+                onChanged: widget.onChanged,
+                validator: widget.validator,
+                autofocus: widget.autofocus,
+                textInputAction: widget.textInputAction,
+                onEditingComplete: widget.onEditingComplete,
+                onFieldSubmitted: widget.onFieldSubmitted,
+                inputFormatters: widget.inputFormatters,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  height: 1.4,
+                ),
+                decoration: InputDecoration(
+                  labelText: widget.label,
+                  hintText: widget.hint,
+                  helperText: widget.helperText,
+                  errorText: widget.errorText,
+                  prefixIcon: widget.prefixIcon != null
+                      ? Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: widget.prefixIcon,
+                        )
+                      : null,
+                  suffixIcon: widget.suffixIcon,
+                  counterText: widget.maxLength != null ? '' : null,
+                  filled: true,
+                  fillColor: _isFocused
+                      ? Colors.white
+                      : const Color(0xFFF8FAFC),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: widget.prefixIcon != null ? 12 : 20,
+                    vertical: widget.maxLines == 1 ? 20 : 16,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: AppTheme.borderColor.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: _borderColorAnimation.value ?? AppTheme.primaryColor,
+                      width: 2,
+                    ),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: AppTheme.errorColor,
+                      width: 1,
+                    ),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: AppTheme.errorColor,
+                      width: 2,
+                    ),
+                  ),
+                  labelStyle: TextStyle(
+                    color: _isFocused
+                        ? AppTheme.primaryColor
+                        : AppTheme.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  hintStyle: TextStyle(
+                    color: AppTheme.textTertiary,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  helperStyle: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: AppTheme.spacing8),
-        ],
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          obscureText: obscureText,
-          maxLines: maxLines,
-          maxLength: maxLength,
-          enabled: enabled,
-          onTap: onTap,
-          onChanged: onChanged,
-          validator: validator,
-          autofocus: autofocus,
-          focusNode: focusNode,
-          textInputAction: textInputAction,
-          onEditingComplete: onEditingComplete,
-          onFieldSubmitted: onFieldSubmitted,
-          decoration: InputDecoration(
-            hintText: hint,
-            helperText: helperText,
-            errorText: errorText,
-            prefixIcon: prefixIcon,
-            suffixIcon: suffixIcon,
-            counterText: '',
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
 
-class EnhancedDropdownField<T> extends StatelessWidget {
+class ModernDropdownField<T> extends StatefulWidget {
   final String? label;
   final String? hint;
   final String? helperText;
-  final String? errorText;
   final T? value;
   final List<T> items;
   final String Function(T) itemText;
@@ -104,12 +242,11 @@ class EnhancedDropdownField<T> extends StatelessWidget {
   final Widget? prefixIcon;
   final FormFieldValidator<T>? validator;
 
-  const EnhancedDropdownField({
+  const ModernDropdownField({
     super.key,
     this.label,
     this.hint,
     this.helperText,
-    this.errorText,
     this.value,
     required this.items,
     required this.itemText,
@@ -120,396 +257,407 @@ class EnhancedDropdownField<T> extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (label != null) ...[
-          Text(
-            label!,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppTheme.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppTheme.spacing8),
-        ],
-        DropdownButtonFormField<T>(
-          value: value,
-          items: items.map((T item) {
-            return DropdownMenuItem<T>(
-              value: item,
-              child: Text(
-                itemText(item),
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            );
-          }).toList(),
-          onChanged: enabled ? onChanged : null,
-          decoration: InputDecoration(
-            hintText: hint,
-            helperText: helperText,
-            errorText: errorText,
-            prefixIcon: prefixIcon,
-          ),
-          validator: validator,
-          icon: const Icon(Icons.keyboard_arrow_down),
-          isExpanded: true,
-        ),
-      ],
-    );
-  }
+  State<ModernDropdownField<T>> createState() => _ModernDropdownFieldState<T>();
 }
 
-class EnhancedDateField extends StatelessWidget {
-  final String? label;
-  final String? hint;
-  final String? helperText;
-  final String? errorText;
-  final DateTime? selectedDate;
-  final ValueChanged<DateTime>? onDateSelected;
-  final DateTime? firstDate;
-  final DateTime? lastDate;
-  final bool enabled;
-  final FormFieldValidator<DateTime>? validator;
+class _ModernDropdownFieldState<T> extends State<ModernDropdownField<T>> {
+  final FocusNode _focusNode = FocusNode();
+  bool _isFocused = false;
 
-  const EnhancedDateField({
-    super.key,
-    this.label,
-    this.hint,
-    this.helperText,
-    this.errorText,
-    this.selectedDate,
-    this.onDateSelected,
-    this.firstDate,
-    this.lastDate,
-    this.enabled = true,
-    this.validator,
-  });
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      setState(() {
+        _isFocused = _focusNode.hasFocus;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (label != null) ...[
+        if (widget.label != null) ...[
           Text(
-            label!,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            widget.label!,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
               color: AppTheme.textPrimary,
               fontWeight: FontWeight.w600,
+              letterSpacing: 0.1,
             ),
           ),
-          const SizedBox(height: AppTheme.spacing8),
-        ],
-        TextFormField(
-          readOnly: true,
-          enabled: enabled,
-          controller: TextEditingController(
-            text: selectedDate != null
-                ? '${selectedDate!.day.toString().padLeft(2, '0')}/${selectedDate!.month.toString().padLeft(2, '0')}/${selectedDate!.year}'
-                : '',
-          ),
-          decoration: InputDecoration(
-            hintText: hint ?? 'Pilih tanggal',
-            helperText: helperText,
-            errorText: errorText,
-            prefixIcon: const Icon(Icons.calendar_today),
-            suffixIcon: const Icon(Icons.keyboard_arrow_down),
-          ),
-          onTap: enabled ? () => _selectDate(context) : null,
-          validator: validator != null
-              ? (value) {
-                  if (selectedDate == null) {
-                    return 'Tanggal harus dipilih';
-                  }
-                  return validator!(selectedDate!);
-                }
-              : null,
-        ),
-      ],
-    );
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: selectedDate ?? DateTime.now(),
-      firstDate: firstDate ?? DateTime(2020),
-      lastDate: lastDate ?? DateTime(2030),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: AppTheme.primaryColor,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null && onDateSelected != null) {
-      onDateSelected!(picked);
-    }
-  }
-}
-
-class EnhancedSliderField extends StatelessWidget {
-  final String? label;
-  final String? helperText;
-  final double value;
-  final double min;
-  final double max;
-  final int? divisions;
-  final ValueChanged<double>? onChanged;
-  final String Function(double)? labelBuilder;
-  final bool enabled;
-
-  const EnhancedSliderField({
-    super.key,
-    this.label,
-    this.helperText,
-    required this.value,
-    required this.min,
-    required this.max,
-    this.divisions,
-    this.onChanged,
-    this.labelBuilder,
-    this.enabled = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (label != null) ...[
-          Text(
-            label!,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppTheme.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppTheme.spacing8),
+          const SizedBox(height: 8),
         ],
         Container(
-          padding: const EdgeInsets.all(AppTheme.spacing16),
           decoration: BoxDecoration(
-            color: AppTheme.backgroundColor,
-            borderRadius: BorderRadius.circular(AppTheme.radius12),
-            border: Border.all(color: AppTheme.borderColor),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: _isFocused
+                ? [
+                    BoxShadow(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
+                : null,
           ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${value.toInt()}%',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.primaryColor,
-                      fontWeight: FontWeight.w700,
+          child: DropdownButtonFormField<T>(
+            value: widget.value,
+            focusNode: _focusNode,
+            items: widget.items.map((T item) {
+              return DropdownMenuItem<T>(
+                value: item,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Text(
+                    widget.itemText(item),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  if (labelBuilder != null)
-                    Text(
-                      labelBuilder!(value),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                ],
+                ),
+              );
+            }).toList(),
+            onChanged: widget.enabled ? widget.onChanged : null,
+            decoration: InputDecoration(
+              hintText: widget.hint,
+              helperText: widget.helperText,
+              prefixIcon: widget.prefixIcon != null
+                  ? Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: widget.prefixIcon,
+                    )
+                  : null,
+              filled: true,
+              fillColor: _isFocused ? Colors.white : const Color(0xFFF8FAFC),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: widget.prefixIcon != null ? 12 : 20,
+                vertical: 20,
               ),
-              const SizedBox(height: AppTheme.spacing12),
-              Slider(
-                value: value,
-                min: min,
-                max: max,
-                divisions: divisions,
-                onChanged: enabled ? onChanged : null,
-                activeColor: AppTheme.primaryColor,
-                inactiveColor: AppTheme.borderColor,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
               ),
-            ],
-          ),
-        ),
-        if (helperText != null) ...[
-          const SizedBox(height: AppTheme.spacing8),
-          Text(
-            helperText!,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.textSecondary,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class EnhancedCheckboxField extends StatelessWidget {
-  final String label;
-  final String? helperText;
-  final bool value;
-  final ValueChanged<bool?>? onChanged;
-  final bool enabled;
-
-  const EnhancedCheckboxField({
-    super.key,
-    required this.label,
-    this.helperText,
-    required this.value,
-    this.onChanged,
-    this.enabled = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Checkbox(
-              value: value,
-              onChanged: enabled ? onChanged : null,
-              activeColor: AppTheme.primaryColor,
-            ),
-            Expanded(
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: enabled ? AppTheme.textPrimary : AppTheme.textTertiary,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppTheme.borderColor.withOpacity(0.3),
+                  width: 1,
                 ),
               ),
-            ),
-          ],
-        ),
-        if (helperText != null) ...[
-          Padding(
-            padding: const EdgeInsets.only(left: AppTheme.spacing48),
-            child: Text(
-              helperText!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.textSecondary,
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppTheme.primaryColor,
+                  width: 2,
+                ),
+              ),
+              hintStyle: TextStyle(
+                color: AppTheme.textTertiary,
+                fontWeight: FontWeight.w400,
               ),
             ),
+            validator: widget.validator,
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              child: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: _isFocused ? AppTheme.primaryColor : AppTheme.textSecondary,
+              ),
+            ),
+            isExpanded: true,
+            dropdownColor: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            elevation: 8,
           ),
-        ],
+        ),
       ],
     );
   }
 }
 
-class EnhancedRadioGroup<T> extends StatelessWidget {
-  final String? label;
-  final String? helperText;
-  final T? value;
-  final List<T> items;
-  final String Function(T) itemText;
-  final ValueChanged<T?>? onChanged;
-  final bool enabled;
-
-  const EnhancedRadioGroup({
-    super.key,
-    this.label,
-    this.helperText,
-    this.value,
-    required this.items,
-    required this.itemText,
-    this.onChanged,
-    this.enabled = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (label != null) ...[
-          Text(
-            label!,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppTheme.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppTheme.spacing12),
-        ],
-        ...items.map((item) => RadioListTile<T>(
-          title: Text(
-            itemText(item),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: enabled ? AppTheme.textPrimary : AppTheme.textTertiary,
-            ),
-          ),
-          value: item,
-          groupValue: value,
-          onChanged: enabled ? onChanged : null,
-          activeColor: AppTheme.primaryColor,
-          contentPadding: EdgeInsets.zero,
-        )),
-        if (helperText != null) ...[
-          const SizedBox(height: AppTheme.spacing8),
-          Text(
-            helperText!,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.textSecondary,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class FormSection extends StatelessWidget {
-  final String? title;
-  final String? subtitle;
-  final List<Widget> children;
+class ModernCard extends StatelessWidget {
+  final Widget child;
   final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final VoidCallback? onTap;
+  final Color? backgroundColor;
+  final bool hasShadow;
+  final double borderRadius;
 
-  const FormSection({
+  const ModernCard({
     super.key,
-    this.title,
-    this.subtitle,
-    required this.children,
+    required this.child,
     this.padding,
+    this.margin,
+    this.onTap,
+    this.backgroundColor,
+    this.hasShadow = true,
+    this.borderRadius = 16,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: padding ?? const EdgeInsets.all(AppTheme.spacing20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (title != null) ...[
-            Text(
-              title!,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: AppTheme.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: AppTheme.spacing4),
-              Text(
-                subtitle!,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textSecondary,
+      margin: margin ?? const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: backgroundColor ?? Colors.white,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(
+          color: AppTheme.borderColor.withOpacity(0.1),
+          width: 0.5,
+        ),
+        boxShadow: hasShadow
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                  spreadRadius: 0,
                 ),
-              ),
-            ],
-            const SizedBox(height: AppTheme.spacing20),
-          ],
-          ...children.map((child) => Padding(
-            padding: const EdgeInsets.only(bottom: AppTheme.spacing20),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                  spreadRadius: 0,
+                ),
+              ]
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: Padding(
+            padding: padding ?? const EdgeInsets.all(20),
             child: child,
-          )),
-        ],
+          ),
+        ),
       ),
     );
   }
-} 
+}
+
+class ModernSection extends StatelessWidget {
+  final String? title;
+  final String? subtitle;
+  final List<Widget> children;
+  final Widget? action;
+  final EdgeInsetsGeometry? padding;
+  final bool showDivider;
+
+  const ModernSection({
+    super.key,
+    this.title,
+    this.subtitle,
+    required this.children,
+    this.action,
+    this.padding,
+    this.showDivider = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (title != null) ...[
+          Padding(
+            padding: padding ?? const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title!,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle!,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textSecondary,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (action != null) action!,
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        ...children.map((child) => Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: child,
+        )),
+        if (showDivider) ...[
+          const SizedBox(height: 8),
+          Divider(
+            color: AppTheme.borderColor.withOpacity(0.3),
+            height: 1,
+            thickness: 0.5,
+          ),
+          const SizedBox(height: 16),
+        ],
+      ],
+    );
+  }
+}
+
+class ModernButton extends StatefulWidget {
+  final String text;
+  final VoidCallback? onPressed;
+  final Widget? icon;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+  final bool isLoading;
+  final bool isOutlined;
+  final EdgeInsetsGeometry? padding;
+  final double borderRadius;
+  final double elevation;
+
+  const ModernButton({
+    super.key,
+    required this.text,
+    this.onPressed,
+    this.icon,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.isLoading = false,
+    this.isOutlined = false,
+    this.padding,
+    this.borderRadius = 12,
+    this.elevation = 0,
+  });
+
+  @override
+  State<ModernButton> createState() => _ModernButtonState();
+}
+
+class _ModernButtonState extends State<ModernButton> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final backgroundColor = widget.backgroundColor ?? 
+        (widget.isOutlined ? Colors.transparent : AppTheme.primaryColor);
+    final foregroundColor = widget.foregroundColor ?? 
+        (widget.isOutlined ? AppTheme.primaryColor : Colors.white);
+
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              boxShadow: widget.elevation > 0 && !widget.isOutlined
+                  ? [
+                      BoxShadow(
+                        color: backgroundColor.withOpacity(0.3),
+                        blurRadius: widget.elevation * 2,
+                        offset: Offset(0, widget.elevation),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Material(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              child: InkWell(
+                onTap: widget.isLoading ? null : widget.onPressed,
+                onTapDown: (_) => _controller.forward(),
+                onTapUp: (_) => _controller.reverse(),
+                onTapCancel: () => _controller.reverse(),
+                borderRadius: BorderRadius.circular(widget.borderRadius),
+                child: Container(
+                  padding: widget.padding ?? 
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                  decoration: widget.isOutlined
+                      ? BoxDecoration(
+                          borderRadius: BorderRadius.circular(widget.borderRadius),
+                          border: Border.all(
+                            color: AppTheme.primaryColor,
+                            width: 1.5,
+                          ),
+                        )
+                      : null,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (widget.isLoading) ...[
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(foregroundColor),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ] else if (widget.icon != null) ...[
+                        widget.icon!,
+                        const SizedBox(width: 12),
+                      ],
+                      Text(
+                        widget.text,
+                        style: TextStyle(
+                          color: foregroundColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
