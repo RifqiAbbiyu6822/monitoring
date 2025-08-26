@@ -1,10 +1,12 @@
-// lib/screens/perbaikan/perbaikan_form_screen.dart
+// lib/screens/perbaikan/perbaikan_form_screen.dart - Updated with Photo Service
 import 'package:flutter/material.dart';
 // ignore: unused_import
 import '../../model/perbaikan.dart';
 import '../../model/temuan.dart';
 import '../../services/local_storage_service.dart';
+import '../../services/photo_service.dart';
 import '../../widgets/form_components.dart';
+import '../../widgets/photo_widgets.dart';
 import '../../utils/theme.dart';
 import '../../utils/validators.dart';
 
@@ -22,7 +24,7 @@ class PerbaikanFormScreen extends StatefulWidget {
   State<PerbaikanFormScreen> createState() => _PerbaikanFormScreenState();
 }
 
-class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> {
+class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _workDescriptionController = TextEditingController();
   final _contractorController = TextEditingController();
@@ -31,6 +33,10 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> {
   final _costController = TextEditingController();
 
   final LocalStorageService _storageService = LocalStorageService();
+  final PhotoService _photoService = PhotoService();
+
+  late TabController _photoTabController;
+  late TabController _editPhotoTabController;
 
   String? _selectedTemuanId;
   String? _selectedStatus;
@@ -43,11 +49,19 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> {
   List<Temuan> _availableTemuan = [];
   Temuan? _selectedTemuan;
 
+  // Photo lists for different stages
+  List<String> _beforePhotos = [];
+  List<String> _progressPhotos = [];
+  List<String> _afterPhotos = [];
+  List<String> _documentationPhotos = [];
+
   final List<String> _statuses = ['pending', 'ongoing', 'selesai', 'cancelled'];
 
   @override
   void initState() {
     super.initState();
+    _photoTabController = TabController(length: 3, vsync: this);
+    _editPhotoTabController = TabController(length: 4, vsync: this);
     _selectedStatus = 'pending';
     _startDate = DateTime.now();
     
@@ -62,6 +76,18 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> {
         _prefillFromTemuan(widget.temuan!);
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _photoTabController.dispose();
+    _editPhotoTabController.dispose();
+    _workDescriptionController.dispose();
+    _contractorController.dispose();
+    _assignedToController.dispose();
+    _notesController.dispose();
+    _costController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPerbaikanData() async {
@@ -86,6 +112,10 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> {
           _startDate = perbaikan.startDate;
           _endDate = perbaikan.endDate;
           _progress = perbaikan.progress ?? 0.0;
+          _beforePhotos = List.from(perbaikan.beforePhotos);
+          _progressPhotos = List.from(perbaikan.progressPhotos);
+          _afterPhotos = List.from(perbaikan.afterPhotos);
+          _documentationPhotos = List.from(perbaikan.documentationPhotos ?? []);
         });
 
         // Load the related temuan
@@ -125,14 +155,28 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> {
     _assignedToController.text = 'Tim Perbaikan ${temuan.section}';
   }
 
-  @override
-  void dispose() {
-    _workDescriptionController.dispose();
-    _contractorController.dispose();
-    _assignedToController.dispose();
-    _notesController.dispose();
-    _costController.dispose();
-    super.dispose();
+  void _onBeforePhotosChanged(List<String> photos) {
+    setState(() {
+      _beforePhotos = photos;
+    });
+  }
+
+  void _onProgressPhotosChanged(List<String> photos) {
+    setState(() {
+      _progressPhotos = photos;
+    });
+  }
+
+  void _onAfterPhotosChanged(List<String> photos) {
+    setState(() {
+      _afterPhotos = photos;
+    });
+  }
+
+  void _onDocumentationPhotosChanged(List<String> photos) {
+    setState(() {
+      _documentationPhotos = photos;
+    });
   }
 
   Future<void> _onSubmit() async {
@@ -163,9 +207,10 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> {
         'startDate': _startDate!.toIso8601String(),
         'endDate': _endDate?.toIso8601String(),
         'progress': _progress,
-        'beforePhotos': <String>[],
-        'progressPhotos': <String>[],
-        'afterPhotos': <String>[],
+        'beforePhotos': _beforePhotos,
+        'progressPhotos': _progressPhotos,
+        'afterPhotos': _afterPhotos,
+        'documentationPhotos': _documentationPhotos,
         'assignedTo': _assignedToController.text.trim(),
         'createdBy': 'Current User', // Replace with actual user
         'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
@@ -279,6 +324,10 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> {
                       const SizedBox(height: AppTheme.spacing24),
                     ],
 
+                    // Photo Documentation Section
+                    _buildPhotoDocumentationSection(),
+                    const SizedBox(height: AppTheme.spacing24),
+
                     // Additional Info Section
                     _buildAdditionalInfoSection(),
                     const SizedBox(height: AppTheme.spacing32),
@@ -330,8 +379,8 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> {
                 const SizedBox(height: AppTheme.spacing4),
                 Text(
                   _isEditMode
-                      ? 'Perbarui informasi perbaikan'
-                      : 'Isi form untuk membuat perbaikan baru',
+                      ? 'Perbarui informasi perbaikan dan dokumentasi foto'
+                      : 'Isi form untuk membuat perbaikan baru dengan dokumentasi lengkap',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppTheme.textSecondary,
                   ),
@@ -648,6 +697,202 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> {
     );
   }
 
+  Widget _buildPhotoDocumentationSection() {
+    return FormSection(
+      title: 'Dokumentasi Foto',
+      subtitle: _isEditMode 
+          ? 'Upload foto untuk dokumentasi tahapan perbaikan dan update'
+          : 'Upload foto untuk dokumentasi tahapan perbaikan',
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceColor,
+            borderRadius: BorderRadius.circular(AppTheme.radius12),
+            border: Border.all(color: AppTheme.borderColor),
+            boxShadow: AppTheme.shadowSm,
+          ),
+          child: Column(
+            children: [
+              // Tab bar for photo categories
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.backgroundColor,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(AppTheme.radius12),
+                  ),
+                ),
+                child: TabBar(
+                  controller: _isEditMode ? _editPhotoTabController : _photoTabController,
+                  tabs: _isEditMode ? [
+                    Tab(
+                      text: 'Sebelum',
+                      icon: const Icon(Icons.camera_alt, size: 16),
+                    ),
+                    Tab(
+                      text: 'Progress',
+                      icon: const Icon(Icons.build, size: 16),
+                    ),
+                    Tab(
+                      text: 'Setelah',
+                      icon: const Icon(Icons.done, size: 16),
+                    ),
+                    Tab(
+                      text: 'Dokumentasi',
+                      icon: const Icon(Icons.photo_library, size: 16),
+                    ),
+                  ] : [
+                    Tab(
+                      text: 'Sebelum',
+                      icon: const Icon(Icons.camera_alt, size: 16),
+                    ),
+                    Tab(
+                      text: 'Progress',
+                      icon: const Icon(Icons.build, size: 16),
+                    ),
+                    Tab(
+                      text: 'Setelah',
+                      icon: const Icon(Icons.done, size: 16),
+                    ),
+                  ],
+                  labelColor: AppTheme.primaryColor,
+                  unselectedLabelColor: AppTheme.textSecondary,
+                  indicatorColor: AppTheme.primaryColor,
+                  labelStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              
+              // Tab content
+              SizedBox(
+                height: 300,
+                child: TabBarView(
+                  controller: _isEditMode ? _editPhotoTabController : _photoTabController,
+                  children: _isEditMode ? [
+                    // Before photos (edit mode)
+                    Padding(
+                      padding: const EdgeInsets.all(AppTheme.spacing16),
+                      child: PhotoPickerWidget(
+                        initialPhotos: _beforePhotos,
+                        onPhotosChanged: _onBeforePhotosChanged,
+                        maxPhotos: 1,
+                        title: 'Foto Kondisi Sebelum',
+                        subtitle: 'Dokumentasi kondisi sebelum perbaikan (${_beforePhotos.length}/1)',
+                      ),
+                    ),
+                    
+                    // Progress photos (edit mode)
+                    Padding(
+                      padding: const EdgeInsets.all(AppTheme.spacing16),
+                      child: PhotoPickerWidget(
+                        initialPhotos: _progressPhotos,
+                        onPhotosChanged: _onProgressPhotosChanged,
+                        maxPhotos: 5,
+                        title: 'Foto Progress',
+                        subtitle: 'Dokumentasi proses perbaikan (${_progressPhotos.length}/5)',
+                      ),
+                    ),
+                    
+                    // After photos (edit mode)
+                    Padding(
+                      padding: const EdgeInsets.all(AppTheme.spacing16),
+                      child: PhotoPickerWidget(
+                        initialPhotos: _afterPhotos,
+                        onPhotosChanged: _onAfterPhotosChanged,
+                        maxPhotos: 5,
+                        title: 'Foto Hasil Akhir',
+                        subtitle: 'Dokumentasi kondisi setelah perbaikan (${_afterPhotos.length}/5)',
+                      ),
+                    ),
+                    
+                    // Documentation photos (edit mode only)
+                    Padding(
+                      padding: const EdgeInsets.all(AppTheme.spacing16),
+                      child: PhotoPickerWidget(
+                        initialPhotos: _documentationPhotos,
+                        onPhotosChanged: _onDocumentationPhotosChanged,
+                        maxPhotos: 10,
+                        title: 'Foto Dokumentasi',
+                        subtitle: 'Foto tambahan untuk dokumentasi update (${_documentationPhotos.length}/10)',
+                      ),
+                    ),
+                  ] : [
+                    // Before photos (create mode)
+                    Padding(
+                      padding: const EdgeInsets.all(AppTheme.spacing16),
+                      child: PhotoPickerWidget(
+                        initialPhotos: _beforePhotos,
+                        onPhotosChanged: _onBeforePhotosChanged,
+                        maxPhotos: 1,
+                        title: 'Foto Kondisi Sebelum',
+                        subtitle: 'Dokumentasi kondisi sebelum perbaikan (${_beforePhotos.length}/1)',
+                      ),
+                    ),
+                    
+                    // Progress photos (create mode)
+                    Padding(
+                      padding: const EdgeInsets.all(AppTheme.spacing16),
+                      child: PhotoPickerWidget(
+                        initialPhotos: _progressPhotos,
+                        onPhotosChanged: _onProgressPhotosChanged,
+                        maxPhotos: 5,
+                        title: 'Foto Progress',
+                        subtitle: 'Dokumentasi proses perbaikan (${_progressPhotos.length}/5)',
+                      ),
+                    ),
+                    
+                    // After photos (create mode)
+                    Padding(
+                      padding: const EdgeInsets.all(AppTheme.spacing16),
+                      child: PhotoPickerWidget(
+                        initialPhotos: _afterPhotos,
+                        onPhotosChanged: _onAfterPhotosChanged,
+                        maxPhotos: 5,
+                        title: 'Foto Hasil Akhir',
+                        subtitle: 'Dokumentasi kondisi setelah perbaikan (${_afterPhotos.length}/5)',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Photo summary
+        const SizedBox(height: AppTheme.spacing12),
+        Container(
+          padding: const EdgeInsets.all(AppTheme.spacing12),
+          decoration: BoxDecoration(
+            color: AppTheme.infoColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(AppTheme.radius8),
+            border: Border.all(color: AppTheme.infoColor.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: AppTheme.infoColor,
+                size: 16,
+              ),
+              const SizedBox(width: AppTheme.spacing8),
+              Expanded(
+                child: Text(
+                  'Total: ${_beforePhotos.length + _progressPhotos.length + _afterPhotos.length + _documentationPhotos.length} foto dokumentasi',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.infoColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildAdditionalInfoSection() {
     return FormSection(
       title: 'Informasi Tambahan',
@@ -680,33 +925,150 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> {
   }
 
   Widget _buildSubmitButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _isLoading ? null : _onSubmit,
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.radius12),
+    return Column(
+      children: [
+        // Summary before submit
+        if (_selectedTemuan != null) ...[
+          Container(
+            padding: const EdgeInsets.all(AppTheme.spacing16),
+            decoration: BoxDecoration(
+              color: AppTheme.successColor.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(AppTheme.radius12),
+              border: Border.all(color: AppTheme.successColor.withOpacity(0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ringkasan Perbaikan',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.successColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacing12),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.build,
+                      color: AppTheme.successColor,
+                      size: 16,
+                    ),
+                    const SizedBox(width: AppTheme.spacing8),
+                    Expanded(
+                      child: Text(
+                        _workDescriptionController.text.isEmpty 
+                            ? 'Deskripsi pekerjaan...'
+                            : _workDescriptionController.text,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.spacing8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.business,
+                      color: AppTheme.textSecondary,
+                      size: 16,
+                    ),
+                    const SizedBox(width: AppTheme.spacing8),
+                    Text(
+                      'Kontraktor: ${_contractorController.text.isEmpty ? "Belum dipilih" : _contractorController.text}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.spacing8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.photo_library,
+                      color: AppTheme.textSecondary,
+                      size: 16,
+                    ),
+                    const SizedBox(width: AppTheme.spacing8),
+                    Text(
+                      'Dokumentasi: ${_beforePhotos.length + _progressPhotos.length + _afterPhotos.length + _documentationPhotos.length} foto',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                if (_isEditMode && _progress > 0) ...[
+                  const SizedBox(height: AppTheme.spacing8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.timeline,
+                        color: AppTheme.primaryColor,
+                        size: 16,
+                      ),
+                      const SizedBox(width: AppTheme.spacing8),
+                      Text(
+                        'Progress: ${_progress.toInt()}%',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacing20),
+        ],
+        
+        // Submit button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _onSubmit,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.radius12),
+              ),
+            ),
+            child: _isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _isEditMode ? Icons.save : Icons.build,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppTheme.spacing8),
+                      Text(
+                        _isEditMode ? 'Perbarui Perbaikan' : 'Simpan Perbaikan',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ),
-        child: _isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                _isEditMode ? 'Perbarui Perbaikan' : 'Simpan Perbaikan',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-      ),
+      ],
     );
   }
 

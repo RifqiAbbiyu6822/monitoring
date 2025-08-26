@@ -7,6 +7,7 @@ import '../../config/category_config.dart';
 import '../../utils/theme.dart';
 import '../../utils/helpers.dart';
 import '../../utils/date_formatter.dart';
+import '../../widgets/photo_widgets.dart';
 
 class TemuanScreen extends StatefulWidget {
   const TemuanScreen({super.key});
@@ -756,6 +757,16 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                         _buildDetailItem('Terakhir Diupdate', DateFormatter.formatDateTime(temuan.updatedAt!)),
                       if (temuan.notes != null && temuan.notes!.isNotEmpty)
                         _buildDetailItem('Catatan', temuan.notes!, isDescription: true),
+                    ]),
+                    const SizedBox(height: AppTheme.spacing20),
+
+                    // Foto section
+                    _buildDetailSection('Foto', [
+                      PhotoViewerWidget(
+                        photos: temuan.photos,
+                        title: 'Foto Temuan',
+                        emptyMessage: 'Tidak ada foto untuk temuan ini',
+                      ),
                     ]),
 
                     const SizedBox(height: AppTheme.spacing32),

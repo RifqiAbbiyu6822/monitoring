@@ -7,6 +7,7 @@ import '../utils/theme.dart';
 import '../utils/helpers.dart';
 import '../utils/date_formatter.dart';
 import '../widgets/animated_loading.dart';
+import '../widgets/photo_widgets.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -931,6 +932,16 @@ class _HistoryScreenState extends State<HistoryScreen>
                       if (temuan.notes != null && temuan.notes!.isNotEmpty)
                         _buildDetailItem('Catatan', temuan.notes!, isDescription: true),
                     ]),
+                    const SizedBox(height: AppTheme.spacing20),
+
+                    // Foto section
+                    _buildDetailSection('Foto', [
+                      PhotoViewerWidget(
+                        photos: temuan.photos,
+                        title: 'Foto Temuan',
+                        emptyMessage: 'Tidak ada foto untuk temuan ini',
+                      ),
+                    ]),
                     const SizedBox(height: AppTheme.spacing32),
                   ],
                 ),
@@ -1059,6 +1070,53 @@ class _HistoryScreenState extends State<HistoryScreen>
                       _buildDetailItem('Kontraktor', perbaikan.contractor),
                       _buildDetailItem('Status', Helpers.getStatusText(perbaikan.status)),
                     ]),
+                    const SizedBox(height: AppTheme.spacing20),
+
+                    // Foto sections
+                    if (perbaikan.beforePhotos.isNotEmpty) ...[
+                      _buildDetailSection('Foto Sebelum', [
+                        PhotoViewerWidget(
+                          photos: perbaikan.beforePhotos,
+                          title: 'Foto Sebelum Perbaikan',
+                          emptyMessage: 'Tidak ada foto sebelum perbaikan',
+                        ),
+                      ]),
+                      const SizedBox(height: AppTheme.spacing20),
+                    ],
+
+                    if (perbaikan.progressPhotos.isNotEmpty) ...[
+                      _buildDetailSection('Foto Progress', [
+                        ProgressPhotoViewerWidget(
+                          photos: perbaikan.progressPhotos,
+                          title: 'Foto Progress Pekerjaan',
+                          emptyMessage: 'Tidak ada foto progress',
+                        ),
+                      ]),
+                      const SizedBox(height: AppTheme.spacing20),
+                    ],
+
+                    if (perbaikan.afterPhotos.isNotEmpty) ...[
+                      _buildDetailSection('Foto Sesudah', [
+                        PhotoViewerWidget(
+                          photos: perbaikan.afterPhotos,
+                          title: 'Foto Sesudah Perbaikan',
+                          emptyMessage: 'Tidak ada foto sesudah perbaikan',
+                        ),
+                      ]),
+                      const SizedBox(height: AppTheme.spacing20),
+                    ],
+
+                    if (perbaikan.documentationPhotos != null && perbaikan.documentationPhotos!.isNotEmpty) ...[
+                      _buildDetailSection('Foto Dokumentasi', [
+                        PhotoViewerWidget(
+                          photos: perbaikan.documentationPhotos!,
+                          title: 'Foto Dokumentasi Update',
+                          emptyMessage: 'Tidak ada foto dokumentasi',
+                        ),
+                      ]),
+                      const SizedBox(height: AppTheme.spacing20),
+                    ],
+
                     const SizedBox(height: AppTheme.spacing32),
                   ],
                 ),

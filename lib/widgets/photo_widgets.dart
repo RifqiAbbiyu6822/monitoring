@@ -65,6 +65,72 @@ class PhotoGridWidget extends StatelessWidget {
                         horizontal: AppTheme.spacing20,
                         vertical: AppTheme.spacing12,
                       ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ] else ...[
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: AppTheme.spacing8,
+              mainAxisSpacing: AppTheme.spacing8,
+              childAspectRatio: 1.0,
+            ),
+            itemCount: photos.length + (canEdit && photos.length < maxPhotos ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index < photos.length) {
+                return _buildPhotoItem(context, photos[index], index);
+              } else {
+                return _buildAddPhotoButton(context);
+              }
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPhotoItem(BuildContext context, String photoPath, int index) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppTheme.radius8),
+        border: Border.all(color: AppTheme.borderColor),
+        boxShadow: AppTheme.shadowSm,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppTheme.radius8),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Photo Image
+            GestureDetector(
+              onTap: () => onViewPhoto?.call(photoPath),
+              child: File(photoPath).existsSync()
+                  ? Image.file(
+                      File(photoPath),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: AppTheme.backgroundColor,
+                          child: const Icon(
+                            Icons.broken_image,
+                            color: AppTheme.textTertiary,
+                          ),
+                        );
+                      },
+                    )
+                  : Container(
+                      color: AppTheme.backgroundColor,
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        color: AppTheme.textTertiary,
+                      ),
+                    ),
             ),
             
             // Photo actions overlay
@@ -162,7 +228,7 @@ class PhotoGridWidget extends StatelessWidget {
               'Tambah',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: AppTheme.primaryColor,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -182,13 +248,13 @@ class PhotoGridWidget extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
             child: const Text('Batal'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               onDeletePhoto?.call(photoPath);
             },
-            style: TextButton.styleFrom(
-              foregroundColor: AppTheme.errorColor,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorColor,
             ),
             child: const Text('Hapus'),
           ),
@@ -198,253 +264,7 @@ class PhotoGridWidget extends StatelessWidget {
   }
 }
 
-// Widget untuk menampilkan foto tunggal
-class PhotoViewWidget extends StatelessWidget {
-  final String photoPath;
-  final String? title;
-  final bool showControls;
-  final VoidCallback? onDelete;
-  final VoidCallback? onReplace;
-
-  const PhotoViewWidget({
-    super.key,
-    required this.photoPath,
-    this.title,
-    this.showControls = true,
-    this.onDelete,
-    this.onReplace,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(AppTheme.radius12),
-        border: Border.all(color: AppTheme.borderColor),
-        boxShadow: AppTheme.shadowSm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (title != null) ...[
-            Padding(
-              padding: const EdgeInsets.all(AppTheme.spacing16),
-              child: Text(
-                title!,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-          
-          // Photo container
-          Container(
-            height: 200,
-            width: double.infinity,
-            margin: const EdgeInsets.all(AppTheme.spacing16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppTheme.radius8),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppTheme.radius8),
-              child: photoPath.isNotEmpty && File(photoPath).existsSync()
-                  ? GestureDetector(
-                      onTap: () => _showFullScreenPhoto(context),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.file(
-                            File(photoPath),
-                            fit: BoxFit.cover,
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.6),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Icon(
-                                Icons.fullscreen,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : Container(
-                      color: AppTheme.backgroundColor,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.photo_library_outlined,
-                            size: 48,
-                            color: AppTheme.textTertiary,
-                          ),
-                          const SizedBox(height: AppTheme.spacing12),
-                          Text(
-                            'Belum ada foto',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
-          ),
-          
-          // Controls
-          if (showControls) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppTheme.spacing16,
-                0,
-                AppTheme.spacing16,
-                AppTheme.spacing16,
-              ),
-              child: Row(
-                children: [
-                  if (photoPath.isEmpty || !File(photoPath).existsSync()) ...[
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: onReplace,
-                        icon: const Icon(Icons.add_a_photo, size: 20),
-                        label: const Text('Tambah Foto'),
-                      ),
-                    ),
-                  ] else ...[
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: onReplace,
-                        icon: const Icon(Icons.photo_camera, size: 20),
-                        label: const Text('Ganti Foto'),
-                      ),
-                    ),
-                    const SizedBox(width: AppTheme.spacing8),
-                    OutlinedButton.icon(
-                      onPressed: onDelete,
-                      icon: const Icon(Icons.delete, size: 20),
-                      label: const Text('Hapus'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.errorColor,
-                        side: BorderSide(color: AppTheme.errorColor),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  void _showFullScreenPhoto(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FullScreenPhotoViewer(photoPath: photoPath),
-      ),
-    );
-  }
-}
-
-// Widget untuk melihat foto fullscreen
-class FullScreenPhotoViewer extends StatelessWidget {
-  final String photoPath;
-
-  const FullScreenPhotoViewer({
-    super.key,
-    required this.photoPath,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share, color: Colors.white),
-            onPressed: () => _sharePhoto(),
-          ),
-        ],
-      ),
-      body: Center(
-        child: InteractiveViewer(
-          panEnabled: true,
-          boundaryMargin: const EdgeInsets.all(20),
-          minScale: 0.5,
-          maxScale: 4.0,
-          child: File(photoPath).existsSync()
-              ? Image.file(
-                  File(photoPath),
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.broken_image,
-                            color: Colors.white,
-                            size: 64,
-                          ),
-                          SizedBox(height: 16),
-                          Text(
-                            'Gagal memuat foto',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                )
-              : const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.image_not_supported,
-                        color: Colors.white,
-                        size: 64,
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        'Foto tidak ditemukan',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-
-  void _sharePhoto() {
-    // Implementasi share foto jika diperlukan
-    print('Share photo: $photoPath');
-  }
-}
-
-// Widget untuk photo picker dengan preview
+// Widget untuk memilih dan mengelola foto
 class PhotoPickerWidget extends StatefulWidget {
   final List<String> initialPhotos;
   final Function(List<String>) onPhotosChanged;
@@ -454,11 +274,11 @@ class PhotoPickerWidget extends StatefulWidget {
 
   const PhotoPickerWidget({
     super.key,
-    this.initialPhotos = const [],
+    required this.initialPhotos,
     required this.onPhotosChanged,
     this.maxPhotos = 5,
     this.title = 'Foto',
-    this.subtitle = 'Tambahkan foto untuk dokumentasi',
+    this.subtitle = 'Pilih foto untuk ditambahkan',
   });
 
   @override
@@ -476,47 +296,114 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget> {
   }
 
   Future<void> _addPhoto() async {
-    try {
-      final photoPath = await _photoService.handlePhotoAction(context);
-      if (photoPath != null) {
-        setState(() {
-          _photos.add(photoPath);
-        });
-        widget.onPhotosChanged(_photos);
+    if (_photos.length >= widget.maxPhotos) {
+      _showMaxPhotosDialog();
+      return;
+    }
+
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => _buildPhotoSourceBottomSheet(),
+    );
+
+    if (result != null) {
+      String? photoPath;
+      
+      try {
+        if (result == 'camera') {
+          photoPath = await _photoService.takePhoto();
+        } else if (result == 'gallery') {
+          photoPath = await _photoService.pickFromGallery();
+        }
+
+                 if (photoPath != null && photoPath.isNotEmpty) {
+           setState(() {
+             _photos.add(photoPath!);
+           });
+           widget.onPhotosChanged(_photos);
+         }
+      } catch (e) {
+        _showErrorSnackBar('Gagal menambahkan foto: $e');
       }
-    } catch (e) {
-      _showErrorSnackBar('Gagal menambah foto: $e');
     }
   }
 
-  Future<void> _deletePhoto(String photoPath) async {
-    try {
-      await _photoService.deletePhoto(photoPath);
-      setState(() {
-        _photos.remove(photoPath);
-      });
-      widget.onPhotosChanged(_photos);
-      _showSuccessSnackBar('Foto berhasil dihapus');
-    } catch (e) {
-      _showErrorSnackBar('Gagal menghapus foto: $e');
-    }
+  void _deletePhoto(String photoPath) {
+    setState(() {
+      _photos.remove(photoPath);
+    });
+    widget.onPhotosChanged(_photos);
   }
 
   void _viewPhoto(String photoPath) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => FullScreenPhotoViewer(photoPath: photoPath),
+        builder: (context) => PhotoViewerScreen(photoPath: photoPath),
       ),
     );
   }
 
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppTheme.successColor,
-        behavior: SnackBarBehavior.floating,
+  Widget _buildPhotoSourceBottomSheet() {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spacing20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Pilih Sumber Foto',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacing20),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context, 'camera'),
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text('Kamera'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing16),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppTheme.spacing16),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context, 'gallery'),
+                  icon: const Icon(Icons.photo_library),
+                  label: const Text('Galeri'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: AppTheme.spacing16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spacing16),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMaxPhotosDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Batas Foto'),
+        content: Text('Maksimal ${widget.maxPhotos} foto yang dapat ditambahkan.'),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }
@@ -527,6 +414,9 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget> {
         content: Text(message),
         backgroundColor: AppTheme.errorColor,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radius12),
+        ),
       ),
     );
   }
@@ -545,11 +435,9 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget> {
                 Text(
                   widget.title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.textPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: AppTheme.spacing4),
                 Text(
                   widget.subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -594,32 +482,148 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget> {
     );
   }
 }
-                    ),
+
+// Widget untuk menampilkan foto dalam layar penuh
+class PhotoViewerScreen extends StatelessWidget {
+  final String photoPath;
+
+  const PhotoViewerScreen({
+    super.key,
+    required this.photoPath,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          'Lihat Foto',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+      body: Center(
+        child: File(photoPath).existsSync()
+            ? Image.file(
+                File(photoPath),
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.broken_image,
+                        color: Colors.white,
+                        size: 64,
+                      ),
+                      SizedBox(height: AppTheme.spacing16),
+                      Text(
+                        'Gagal memuat foto',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  );
+                },
+              )
+            : const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.image_not_supported,
+                    color: Colors.white,
+                    size: 64,
+                  ),
+                  SizedBox(height: AppTheme.spacing16),
+                  Text(
+                    'Foto tidak ditemukan',
+                    style: TextStyle(color: Colors.white),
                   ),
                 ],
-              ],
+              ),
+      ),
+    );
+  }
+}
+
+// Widget untuk menampilkan foto dalam mode view-only (untuk detail temuan)
+class PhotoViewerWidget extends StatelessWidget {
+  final List<String> photos;
+  final String title;
+  final String emptyMessage;
+
+  const PhotoViewerWidget({
+    super.key,
+    required this.photos,
+    this.title = 'Foto',
+    this.emptyMessage = 'Tidak ada foto',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (photos.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(AppTheme.spacing16),
+        decoration: BoxDecoration(
+          color: AppTheme.backgroundColor,
+          borderRadius: BorderRadius.circular(AppTheme.radius12),
+          border: Border.all(color: AppTheme.borderColor),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.photo_library_outlined,
+              size: 48,
+              color: AppTheme.textTertiary,
             ),
-          ),
-        ] else ...[
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: AppTheme.spacing8,
-              mainAxisSpacing: AppTheme.spacing8,
-              childAspectRatio: 1.0,
+            const SizedBox(height: AppTheme.spacing12),
+            Text(
+              emptyMessage,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondary,
+              ),
             ),
-            itemCount: photos.length + (canEdit && photos.length < maxPhotos ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index < photos.length) {
-                return _buildPhotoItem(context, photos[index], index);
-              } else {
-                return _buildAddPhotoButton(context);
-              }
-            },
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.photo_library,
+              size: 20,
+              color: AppTheme.primaryColor,
+            ),
+            const SizedBox(width: AppTheme.spacing8),
+            Text(
+              '$title (${photos.length})',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppTheme.spacing12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: AppTheme.spacing8,
+            mainAxisSpacing: AppTheme.spacing8,
+            childAspectRatio: 1.0,
           ),
-        ],
+          itemCount: photos.length,
+          itemBuilder: (context, index) {
+            return _buildPhotoItem(context, photos[index], index);
+          },
+        ),
       ],
     );
   }
@@ -638,7 +642,7 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget> {
           children: [
             // Photo Image
             GestureDetector(
-              onTap: () => onViewPhoto?.call(photoPath),
+              onTap: () => _viewPhoto(context, photoPath),
               child: File(photoPath).existsSync()
                   ? Image.file(
                       File(photoPath),
@@ -659,3 +663,267 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget> {
                         Icons.image_not_supported,
                         color: AppTheme.textTertiary,
                       ),
+                    ),
+            ),
+            
+            // Photo index
+            Positioned(
+              bottom: 4,
+              left: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(AppTheme.radius4),
+                ),
+                child: Text(
+                  '${index + 1}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            
+            // View icon overlay
+            Positioned(
+              top: 4,
+              right: 4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(AppTheme.radius4),
+                ),
+                child: const Icon(
+                  Icons.visibility,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _viewPhoto(BuildContext context, String photoPath) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PhotoViewerScreen(photoPath: photoPath),
+      ),
+    );
+  }
+}
+
+// Widget untuk menampilkan foto progress dengan informasi tambahan
+class ProgressPhotoViewerWidget extends StatelessWidget {
+  final List<String> photos;
+  final String title;
+  final String emptyMessage;
+  final List<Map<String, dynamic>>? photoMetadata; // Optional metadata for each photo
+
+  const ProgressPhotoViewerWidget({
+    super.key,
+    required this.photos,
+    this.title = 'Foto Progress',
+    this.emptyMessage = 'Tidak ada foto progress',
+    this.photoMetadata,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (photos.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(AppTheme.spacing16),
+        decoration: BoxDecoration(
+          color: AppTheme.backgroundColor,
+          borderRadius: BorderRadius.circular(AppTheme.radius12),
+          border: Border.all(color: AppTheme.borderColor),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.timeline,
+              size: 48,
+              color: AppTheme.textTertiary,
+            ),
+            const SizedBox(height: AppTheme.spacing12),
+            Text(
+              emptyMessage,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.timeline,
+              size: 20,
+              color: AppTheme.primaryColor,
+            ),
+            const SizedBox(width: AppTheme.spacing8),
+            Text(
+              '$title (${photos.length})',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppTheme.spacing12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: AppTheme.spacing8,
+            mainAxisSpacing: AppTheme.spacing8,
+            childAspectRatio: 0.8,
+          ),
+          itemCount: photos.length,
+          itemBuilder: (context, index) {
+            return _buildProgressPhotoItem(context, photos[index], index);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressPhotoItem(BuildContext context, String photoPath, int index) {
+    final metadata = photoMetadata != null && index < photoMetadata!.length 
+        ? photoMetadata![index] 
+        : null;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppTheme.radius12),
+        border: Border.all(color: AppTheme.borderColor),
+        boxShadow: AppTheme.shadowSm,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppTheme.radius12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Photo Image
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _viewPhoto(context, photoPath),
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppTheme.backgroundColor,
+                  ),
+                  child: File(photoPath).existsSync()
+                      ? Image.file(
+                          File(photoPath),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: AppTheme.backgroundColor,
+                              child: const Icon(
+                                Icons.broken_image,
+                                color: AppTheme.textTertiary,
+                              ),
+                            );
+                          },
+                        )
+                      : Container(
+                          color: AppTheme.backgroundColor,
+                          child: const Icon(
+                            Icons.image_not_supported,
+                            color: AppTheme.textTertiary,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+            
+            // Metadata section
+            if (metadata != null) ...[
+              Container(
+                padding: const EdgeInsets.all(AppTheme.spacing8),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceColor,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (metadata['date'] != null)
+                      Text(
+                        metadata['date'],
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppTheme.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    if (metadata['progress'] != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: LinearProgressIndicator(
+                              value: metadata['progress'] / 100,
+                              backgroundColor: AppTheme.borderColor,
+                              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: AppTheme.spacing8),
+                          Text(
+                            '${metadata['progress']}%',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppTheme.primaryColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (metadata['description'] != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        metadata['description'],
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppTheme.textPrimary,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _viewPhoto(BuildContext context, String photoPath) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PhotoViewerScreen(photoPath: photoPath),
+      ),
+    );
+  }
+}

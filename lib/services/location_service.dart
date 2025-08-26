@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class LocationData {
   final double latitude;
@@ -90,11 +89,7 @@ class LocationService {
 
       // Get current position with high accuracy
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          distanceFilter: 10,
-          timeLimit: Duration(seconds: 30),
-        ),
+        desiredAccuracy: LocationAccuracy.high,
       ).timeout(timeout);
 
       final locationData = LocationData(
@@ -135,13 +130,7 @@ class LocationService {
   }) {
     final StreamController<LocationData> controller = StreamController<LocationData>();
 
-    _positionStreamSubscription = Geolocator.getPositionStream(
-      locationSettings: LocationSettings(
-        accuracy: accuracy,
-        distanceFilter: distanceFilter,
-        timeLimit: timeInterval ?? const Duration(seconds: 30),
-      ),
-    ).listen(
+    _positionStreamSubscription = Geolocator.getPositionStream().listen(
       (Position position) {
         final locationData = LocationData(
           latitude: position.latitude,

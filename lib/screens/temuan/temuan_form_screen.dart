@@ -1,10 +1,13 @@
-// lib/screens/temuan/temuan_form_screen.dart
+// lib/screens/temuan/temuan_form_screen.dart - Updated with Location & Photo Services
 import 'package:flutter/material.dart';
 import '../../widgets/form_components.dart';
 import '../../widgets/priority_info_widget.dart';
+import '../../widgets/photo_widgets.dart';
 import '../../utils/theme.dart';
 import '../../utils/validators.dart';
 import '../../services/local_storage_service.dart';
+import '../../services/location_service.dart';
+import '../../services/photo_service.dart';
 import '../../config/category_config.dart';
 
 class TemuanFormScreen extends StatefulWidget {
@@ -30,6 +33,8 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
   final _longitudeController = TextEditingController();
 
   final LocalStorageService _storageService = LocalStorageService();
+  final LocationService _locationService = LocationService();
+  final PhotoService _photoService = PhotoService();
 
   String? _selectedCategory;
   String? _selectedSubcategory;
@@ -37,8 +42,11 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
   String? _selectedLane;
   String? _selectedPriority;
   DateTime? _selectedDate;
+  List<String> _photos = [];
+  LocationData? _currentLocation;
   bool _isLoading = false;
   bool _isEditMode = false;
+  bool _isGettingLocation = false;
 
   // Simplified sections and lanes
   final List<String> _sections = ['A', 'B'];
@@ -79,6 +87,16 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
           _selectedLane = temuan.lane;
           _selectedPriority = temuan.priority;
           _selectedDate = temuan.createdAt;
+          _photos = List.from(temuan.photos);
+          
+          // Set current location if coordinates exist
+          if (temuan.latitude != 0.0 || temuan.longitude != 0.0) {
+            _currentLocation = LocationData(
+              latitude: temuan.latitude,
+              longitude: temuan.longitude,
+              timestamp: temuan.createdAt,
+            );
+          }
         });
       }
     } catch (e) {
@@ -97,6 +115,7 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
     _notesController.dispose();
     _latitudeController.dispose();
     _longitudeController.dispose();
+    _locationService.dispose();
     super.dispose();
   }
 
@@ -104,13 +123,54 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
     setState(() {
       _selectedCategory = category;
       _selectedSubcategory = null;
-      _selectedLane = null; // Reset lane when category changes
+      _selectedLane = null;
     });
   }
 
   CategoryConfig? get _currentCategoryConfig {
     if (_selectedCategory == null) return null;
     return AppCategoryConfigs.getConfig(_selectedCategory!);
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isGettingLocation = true;
+    });
+
+    try {
+      final location = await _locationService.getCurrentLocation();
+      if (location != null) {
+        setState(() {
+          _currentLocation = location;
+          _latitudeController.text = location.latitude.toString();
+          _longitudeController.text = location.longitude.toString();
+        });
+        _showSuccessSnackBar('Lokasi berhasil didapatkan');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Gagal mendapatkan lokasi: $e');
+    } finally {
+      setState(() {
+        _isGettingLocation = false;
+      });
+    }
+  }
+
+  Future<void> _showLocationDialog() async {
+    final location = await _locationService.showLocationDialog(context);
+    if (location != null) {
+      setState(() {
+        _currentLocation = location;
+        _latitudeController.text = location.latitude.toString();
+        _longitudeController.text = location.longitude.toString();
+      });
+    }
+  }
+
+  void _onPhotosChanged(List<String> newPhotos) {
+    setState(() {
+      _photos = newPhotos;
+    });
   }
 
   Future<void> _onSubmit() async {
@@ -133,7 +193,7 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
         'priority': _selectedPriority!,
         'latitude': double.tryParse(_latitudeController.text.trim()) ?? 0.0,
         'longitude': double.tryParse(_longitudeController.text.trim()) ?? 0.0,
-        'photos': <String>[],
+        'photos': _photos,
         'createdBy': 'Current User',
         'notes': _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       };
@@ -225,7 +285,7 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
                     _buildHeaderSection(),
                     const SizedBox(height: AppTheme.spacing24),
 
-                    // Category Selection (using new widget)
+                    // Category Selection
                     if (!_isEditMode) ...[
                       CategoryInfoWidget(
                         selectedCategory: _selectedCategory,
@@ -235,7 +295,7 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
                       const SizedBox(height: AppTheme.spacing24),
                     ],
 
-                    // Location Information (conditional based on category)
+                    // Location Information
                     if (_selectedCategory != null) ...[
                       _buildLocationSection(),
                       const SizedBox(height: AppTheme.spacing24),
@@ -247,7 +307,13 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
                       const SizedBox(height: AppTheme.spacing24),
                     ],
 
-                    // Priority Selection (using new widget)
+                    // Photo Section
+                    if (_selectedCategory != null) ...[
+                      _buildPhotoSection(),
+                      const SizedBox(height: AppTheme.spacing24),
+                    ],
+
+                    // Priority Selection
                     if (_selectedCategory != null) ...[
                       PriorityInfoWidget(
                         selectedPriority: _selectedPriority,
@@ -331,7 +397,6 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
       title: 'Informasi Lokasi',
       subtitle: 'Detail lokasi temuan ${config.name.toLowerCase()}',
       children: [
-        // Sub Category
         EnhancedDropdownField<String>(
           label: 'Jenis ${config.name}',
           hint: 'Pilih jenis ${config.name.toLowerCase()}',
@@ -346,7 +411,6 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
           },
         ),
 
-        // Section (always show)
         if (config.showSection)
           EnhancedDropdownField<String>(
             label: 'Seksi',
@@ -362,7 +426,6 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
             },
           ),
 
-        // KM Point (always show for road infrastructure)
         if (config.showKmPoint)
           EnhancedTextField(
             label: 'KM Point',
@@ -372,7 +435,6 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
             validator: Validators.validateKmPoint,
           ),
 
-        // Lane (conditional)
         if (config.showLane)
           EnhancedDropdownField<String>(
             label: 'Lajur/Posisi',
@@ -439,11 +501,108 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
     );
   }
 
+  Widget _buildPhotoSection() {
+    return FormSection(
+      title: 'Dokumentasi Foto',
+      subtitle: 'Tambahkan foto untuk dokumentasi temuan',
+      children: [
+        PhotoPickerWidget(
+          initialPhotos: _photos,
+          onPhotosChanged: _onPhotosChanged,
+          maxPhotos: 5,
+          title: 'Foto Temuan',
+          subtitle: 'Maksimal 5 foto (${_photos.length}/5)',
+        ),
+      ],
+    );
+  }
+
   Widget _buildCoordinatesSection() {
     return FormSection(
       title: 'Koordinat GPS',
       subtitle: 'Koordinat lokasi temuan untuk pemetaan yang akurat',
       children: [
+        // Current location display
+        if (_currentLocation != null) ...[
+          Container(
+            padding: const EdgeInsets.all(AppTheme.spacing16),
+            decoration: BoxDecoration(
+              color: AppTheme.successColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(AppTheme.radius12),
+              border: Border.all(color: AppTheme.successColor.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.gps_fixed,
+                      color: AppTheme.successColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: AppTheme.spacing8),
+                    Text(
+                      'Lokasi GPS Aktif',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppTheme.successColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.spacing8),
+                Text(
+                  _currentLocation!.toDetailedString(),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textPrimary,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacing8),
+                Text(
+                  _locationService.getAccuracyDescription(_currentLocation!.accuracy),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacing16),
+        ],
+
+        // GPS action buttons
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _isGettingLocation ? null : _getCurrentLocation,
+                icon: _isGettingLocation 
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.my_location),
+                label: Text(_isGettingLocation ? 'Mencari...' : 'Ambil Lokasi GPS'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppTheme.spacing12),
+            OutlinedButton.icon(
+              onPressed: _showLocationDialog,
+              icon: const Icon(Icons.location_searching),
+              label: const Text('Pilih Manual'),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: AppTheme.spacing16),
+
+        // Manual coordinate input
         Row(
           children: [
             Expanded(
@@ -528,9 +687,10 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
               ),
               const SizedBox(height: AppTheme.spacing8),
               Text(
-                '• Gunakan aplikasi GPS atau Google Maps untuk mendapatkan koordinat yang akurat\n'
-                '• Pastikan berada di lokasi temuan saat mengambil koordinat\n'
-                '• Koordinat akan membantu tim lapangan menemukan lokasi dengan tepat',
+                '• Pastikan GPS aktif dan Anda berada di lokasi temuan saat mengambil koordinat\n'
+                '• Tunggu hingga akurasi GPS mencapai ±10 meter atau lebih baik\n'
+                '• Koordinat akan membantu tim lapangan menemukan lokasi dengan tepat\n'
+                '• Jika GPS tidak tersedia, masukkan koordinat secara manual',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppTheme.textSecondary,
                   height: 1.4,
@@ -614,6 +774,44 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
                         'Lokasi: Seksi $_selectedSection, KM ${_kmPointController.text}',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (_photos.isNotEmpty) ...[
+                  const SizedBox(height: AppTheme.spacing8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.photo_library,
+                        color: AppTheme.textSecondary,
+                        size: 16,
+                      ),
+                      const SizedBox(width: AppTheme.spacing8),
+                      Text(
+                        '${_photos.length} foto dokumentasi',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (_currentLocation != null) ...[
+                  const SizedBox(height: AppTheme.spacing8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.gps_fixed,
+                        color: AppTheme.successColor,
+                        size: 16,
+                      ),
+                      const SizedBox(width: AppTheme.spacing8),
+                      Text(
+                        'GPS: ${_locationService.getAccuracyDescription(_currentLocation!.accuracy)}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.successColor,
                         ),
                       ),
                     ],

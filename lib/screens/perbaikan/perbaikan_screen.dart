@@ -7,6 +7,7 @@ import '../../services/local_storage_service.dart';
 import '../../utils/theme.dart';
 import '../../utils/helpers.dart';
 import '../../utils/date_formatter.dart';
+import '../../widgets/photo_widgets.dart';
 
 class PerbaikanScreen extends StatefulWidget {
   const PerbaikanScreen({super.key});
@@ -923,6 +924,52 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                       _buildDetailItem('Tanggal Dibuat', DateFormatter.formatDateTime(perbaikan.createdAt)),
                       _buildDetailItem('Temuan ID', perbaikan.temuanId),
                     ]),
+                    const SizedBox(height: AppTheme.spacing20),
+
+                    // Foto sections
+                    if (perbaikan.beforePhotos.isNotEmpty) ...[
+                      _buildDetailSection('Foto Sebelum', [
+                        PhotoViewerWidget(
+                          photos: perbaikan.beforePhotos,
+                          title: 'Foto Sebelum Perbaikan',
+                          emptyMessage: 'Tidak ada foto sebelum perbaikan',
+                        ),
+                      ]),
+                      const SizedBox(height: AppTheme.spacing20),
+                    ],
+
+                    if (perbaikan.progressPhotos.isNotEmpty) ...[
+                      _buildDetailSection('Foto Progress', [
+                        ProgressPhotoViewerWidget(
+                          photos: perbaikan.progressPhotos,
+                          title: 'Foto Progress Pekerjaan',
+                          emptyMessage: 'Tidak ada foto progress',
+                        ),
+                      ]),
+                      const SizedBox(height: AppTheme.spacing20),
+                    ],
+
+                    if (perbaikan.afterPhotos.isNotEmpty) ...[
+                      _buildDetailSection('Foto Sesudah', [
+                        PhotoViewerWidget(
+                          photos: perbaikan.afterPhotos,
+                          title: 'Foto Sesudah Perbaikan',
+                          emptyMessage: 'Tidak ada foto sesudah perbaikan',
+                        ),
+                      ]),
+                      const SizedBox(height: AppTheme.spacing20),
+                    ],
+
+                    if (perbaikan.documentationPhotos != null && perbaikan.documentationPhotos!.isNotEmpty) ...[
+                      _buildDetailSection('Foto Dokumentasi', [
+                        PhotoViewerWidget(
+                          photos: perbaikan.documentationPhotos!,
+                          title: 'Foto Dokumentasi Update',
+                          emptyMessage: 'Tidak ada foto dokumentasi',
+                        ),
+                      ]),
+                      const SizedBox(height: AppTheme.spacing20),
+                    ],
 
                     const SizedBox(height: AppTheme.spacing32),
 
@@ -1024,6 +1071,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
     double currentProgress = perbaikan.progress ?? 0.0;
     String currentStatus = perbaikan.status;
     final notesController = TextEditingController();
+    List<String> progressPhotos = [];
 
     showDialog(
       context: context,
@@ -1032,7 +1080,9 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
           builder: (context, setState) {
             return AlertDialog(
               title: const Text('Update Progress'),
-              content: SingleChildScrollView(
+              content: SizedBox(
+                width: double.maxFinite,
+                height: MediaQuery.of(context).size.height * 0.6,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1093,6 +1143,60 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                       ),
                       maxLines: 3,
                     ),
+                    const SizedBox(height: AppTheme.spacing16),
+                    // Foto Dokumentasi Section
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(AppTheme.spacing16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.backgroundColor,
+                          borderRadius: BorderRadius.circular(AppTheme.radius12),
+                          border: Border.all(color: AppTheme.borderColor),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.photo_library,
+                                  color: AppTheme.primaryColor,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: AppTheme.spacing8),
+                                Text(
+                                  'Foto Dokumentasi Progress',
+                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppTheme.spacing8),
+                            Text(
+                              'Tambahkan foto untuk dokumentasi progress (${progressPhotos.length}/5)',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: AppTheme.spacing12),
+                            Expanded(
+                              child: PhotoPickerWidget(
+                                initialPhotos: progressPhotos,
+                                onPhotosChanged: (photos) {
+                                  setState(() {
+                                    progressPhotos = photos;
+                                  });
+                                },
+                                maxPhotos: 5,
+                                title: 'Foto Dokumentasi',
+                                subtitle: 'Foto untuk dokumentasi progress',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1104,7 +1208,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                 ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    _updatePerbaikanProgress(perbaikan.id, currentProgress, currentStatus, notesController.text);
+                    _updatePerbaikanProgress(perbaikan.id, currentProgress, currentStatus, notesController.text, progressPhotos);
                   },
                   child: const Text('Update'),
                 ),
@@ -1116,12 +1220,24 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
     );
   }
 
-  Future<void> _updatePerbaikanProgress(String perbaikanId, double progress, String status, String notes) async {
+  Future<void> _updatePerbaikanProgress(String perbaikanId, double progress, String status, String notes, List<String> progressPhotos) async {
     try {
+      // Get current perbaikan data
+      final currentPerbaikan = await _storageService.getPerbaikanById(perbaikanId);
+      if (currentPerbaikan == null) {
+        _showErrorSnackBar('Data perbaikan tidak ditemukan');
+        return;
+      }
+
+      // Merge existing documentation photos with new progress photos
+      List<String> updatedDocumentationPhotos = List.from(currentPerbaikan.documentationPhotos ?? []);
+      updatedDocumentationPhotos.addAll(progressPhotos);
+
       final updateData = {
         'progress': progress,
         'status': status,
         'notes': notes.isEmpty ? null : notes,
+        'documentationPhotos': updatedDocumentationPhotos,
         if (status == 'selesai') 'endDate': DateTime.now().toIso8601String(),
       };
 

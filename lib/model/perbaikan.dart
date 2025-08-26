@@ -15,6 +15,7 @@ class Perbaikan {
   final List<String> beforePhotos;
   final List<String> progressPhotos;
   final List<String> afterPhotos;
+  final List<String>? documentationPhotos;
   final String assignedTo;
   final DateTime createdAt;
   final String createdBy;
@@ -38,6 +39,7 @@ class Perbaikan {
     required this.beforePhotos,
     required this.progressPhotos,
     required this.afterPhotos,
+    this.documentationPhotos,
     required this.assignedTo,
     required this.createdAt,
     required this.createdBy,
@@ -63,6 +65,7 @@ class Perbaikan {
       'beforePhotos': beforePhotos,
       'progressPhotos': progressPhotos,
       'afterPhotos': afterPhotos,
+      'documentationPhotos': documentationPhotos,
       'assignedTo': assignedTo,
       'createdAt': createdAt.toIso8601String(),
       'createdBy': createdBy,
@@ -91,6 +94,9 @@ class Perbaikan {
       beforePhotos: List<String>.from(json['beforePhotos']),
       progressPhotos: List<String>.from(json['progressPhotos']),
       afterPhotos: List<String>.from(json['afterPhotos']),
+      documentationPhotos: json['documentationPhotos'] != null 
+          ? List<String>.from(json['documentationPhotos'])
+          : null,
       assignedTo: json['assignedTo'],
       createdAt: DateTime.parse(json['createdAt']),
       createdBy: json['createdBy'],
