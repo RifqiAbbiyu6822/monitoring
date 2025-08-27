@@ -390,7 +390,7 @@ class CategoryInfoWidget extends StatelessWidget {
                     vertical: AppTheme.spacing4,
                   ),
                   decoration: BoxDecoration(
-                    color: config.color.withOpacity(0.2),
+                    color: config.color.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(AppTheme.radius8),
                   ),
                   child: Text(

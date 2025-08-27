@@ -83,7 +83,7 @@ class _AnimatedLoadingState extends State<AnimatedLoading>
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(widget.size / 2),
                 border: Border.all(
-                  color: widget.color.withOpacity(0.3),
+                  color: widget.color.withValues(alpha: 0.3),
                   width: 3,
                 ),
               ),
