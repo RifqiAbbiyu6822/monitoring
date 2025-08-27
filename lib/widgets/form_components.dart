@@ -310,7 +310,7 @@ class _EnhancedDropdownFieldState<T> extends State<EnhancedDropdownField<T>> {
             boxShadow: _isFocused
                 ? [
                     BoxShadow(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     )
@@ -357,7 +357,7 @@ class _EnhancedDropdownFieldState<T> extends State<EnhancedDropdownField<T>> {
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
-                  color: AppTheme.borderColor.withOpacity(0.5),
+                  color: AppTheme.borderColor.withValues(alpha: 0.5),
                   width: 1,
                 ),
               ),
@@ -451,7 +451,7 @@ class EnhancedDateField extends StatelessWidget {
                       border: Border.all(
                         color: state.hasError 
                             ? AppTheme.errorColor 
-                            : AppTheme.borderColor.withOpacity(0.5),
+                            : AppTheme.borderColor.withValues(alpha: 0.5),
                         width: 1,
                       ),
                     ),
@@ -591,7 +591,7 @@ class EnhancedSliderField extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -612,7 +612,7 @@ class EnhancedSliderField extends StatelessWidget {
             activeTrackColor: AppTheme.primaryColor,
             inactiveTrackColor: AppTheme.borderColor,
             thumbColor: AppTheme.primaryColor,
-            overlayColor: AppTheme.primaryColor.withOpacity(0.1),
+            overlayColor: AppTheme.primaryColor.withValues(alpha: 0.1),
             valueIndicatorColor: AppTheme.primaryColor,
             valueIndicatorTextStyle: const TextStyle(
               color: Colors.white,
@@ -716,7 +716,7 @@ class FormSection extends StatelessWidget {
         if (showDivider) ...[
           const SizedBox(height: 8),
           Divider(
-            color: AppTheme.borderColor.withOpacity(0.3),
+            color: AppTheme.borderColor.withValues(alpha: 0.3),
             height: 1,
             thickness: 0.5,
           ),
@@ -801,7 +801,7 @@ class _EnhancedButtonState extends State<EnhancedButton>
               boxShadow: widget.elevation > 0 && !widget.isOutlined
                   ? [
                       BoxShadow(
-                        color: backgroundColor.withOpacity(0.3),
+                        color: backgroundColor.withValues(alpha: 0.3),
                         blurRadius: widget.elevation * 2,
                         offset: Offset(0, widget.elevation),
                       ),
@@ -895,19 +895,19 @@ class ModernCard extends StatelessWidget {
         color: backgroundColor ?? Colors.white,
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
-          color: AppTheme.borderColor.withOpacity(0.1),
+          color: AppTheme.borderColor.withValues(alpha: 0.1),
           width: 0.5,
         ),
         boxShadow: hasShadow
             ? [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 16,
                   offset: const Offset(0, 4),
                   spreadRadius: 0,
                 ),
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                   spreadRadius: 0,

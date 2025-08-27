@@ -231,7 +231,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(AppTheme.radius12),
             ),
             child: const Icon(
@@ -256,7 +256,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 Text(
                   'Data monitoring periode ${_selectedPeriod}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                 ),
               ],
@@ -319,7 +319,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing6),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppTheme.radius12),
             ),
             child: Icon(
@@ -654,7 +654,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppTheme.radius8),
             ),
             child: Icon(
@@ -698,7 +698,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   vertical: AppTheme.spacing4,
                 ),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppTheme.radius8),
                 ),
                 child: Text(

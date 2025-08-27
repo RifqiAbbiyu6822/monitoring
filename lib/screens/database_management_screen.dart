@@ -642,7 +642,7 @@ class _DatabaseManagementScreenState extends State<DatabaseManagementScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(AppTheme.spacing8),
                   decoration: BoxDecoration(
-                    color: AppTheme.successColor.withOpacity(0.1),
+                    color: AppTheme.successColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radius8),
                   ),
                   child: Icon(
@@ -660,7 +660,7 @@ class _DatabaseManagementScreenState extends State<DatabaseManagementScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(AppTheme.spacing8),
                   decoration: BoxDecoration(
-                    color: AppTheme.warningColor.withOpacity(0.1),
+                    color: AppTheme.warningColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radius8),
                   ),
                   child: Icon(
@@ -700,7 +700,7 @@ class _DatabaseManagementScreenState extends State<DatabaseManagementScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(AppTheme.spacing8),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radius8),
                   ),
                   child: Icon(
@@ -718,7 +718,7 @@ class _DatabaseManagementScreenState extends State<DatabaseManagementScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(AppTheme.spacing8),
                   decoration: BoxDecoration(
-                    color: AppTheme.infoColor.withOpacity(0.1),
+                    color: AppTheme.infoColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radius8),
                   ),
                   child: Icon(
@@ -754,14 +754,14 @@ class _DatabaseManagementScreenState extends State<DatabaseManagementScreen> {
         EnhancedCard(
           child: Container(
             decoration: BoxDecoration(
-              border: Border.all(color: AppTheme.errorColor.withOpacity(0.3)),
+              border: Border.all(color: AppTheme.errorColor.withValues(alpha: 0.3)),
               borderRadius: BorderRadius.circular(AppTheme.radius12),
             ),
             child: ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(AppTheme.spacing8),
                 decoration: BoxDecoration(
-                  color: AppTheme.errorColor.withOpacity(0.1),
+                  color: AppTheme.errorColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppTheme.radius8),
                 ),
                 child: Icon(
@@ -784,9 +784,9 @@ class _DatabaseManagementScreenState extends State<DatabaseManagementScreen> {
         Container(
           padding: const EdgeInsets.all(AppTheme.spacing16),
           decoration: BoxDecoration(
-            color: AppTheme.errorColor.withOpacity(0.1),
+            color: AppTheme.errorColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppTheme.radius12),
-            border: Border.all(color: AppTheme.errorColor.withOpacity(0.3)),
+                          border: Border.all(color: AppTheme.errorColor.withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [

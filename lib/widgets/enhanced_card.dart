@@ -98,13 +98,13 @@ class _EnhancedCardState extends State<EnhancedCard>
               borderRadius: widget.borderRadius ?? BorderRadius.circular(16.0),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                                     color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: _elevationAnimation.value * 2,
                   offset: Offset(0, _elevationAnimation.value),
                   spreadRadius: 0,
                 ),
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                                     color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: _elevationAnimation.value,
                   offset: Offset(0, _elevationAnimation.value / 2),
                   spreadRadius: 0,
@@ -211,10 +211,10 @@ class GlassCard extends StatelessWidget {
           child: Container(
             padding: padding ?? const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
-              color: (backgroundColor ?? Colors.white).withOpacity(0.1),
+                             color: (backgroundColor ?? Colors.white).withValues(alpha: 0.1),
               borderRadius: borderRadius ?? BorderRadius.circular(16.0),
               border: Border.all(
-                color: Colors.white.withOpacity(0.2),
+                                 color: Colors.white.withValues(alpha: 0.2),
                 width: 1.5,
               ),
             ),

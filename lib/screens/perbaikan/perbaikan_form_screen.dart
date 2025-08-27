@@ -391,7 +391,7 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing12),
             decoration: BoxDecoration(
-              color: AppTheme.successColor.withOpacity(0.1),
+                              color: AppTheme.successColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppTheme.radius12),
             ),
             child: Icon(
@@ -438,9 +438,9 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing16),
             decoration: BoxDecoration(
-              color: AppTheme.infoColor.withOpacity(0.1),
+              color: AppTheme.infoColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppTheme.radius12),
-              border: Border.all(color: AppTheme.infoColor.withOpacity(0.3)),
+              border: Border.all(color: AppTheme.infoColor.withValues(alpha: 0.3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,9 +497,9 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
             Container(
               padding: const EdgeInsets.all(AppTheme.spacing20),
               decoration: BoxDecoration(
-                color: AppTheme.warningColor.withOpacity(0.1),
+                color: AppTheme.warningColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppTheme.radius12),
-                border: Border.all(color: AppTheme.warningColor.withOpacity(0.3)),
+                border: Border.all(color: AppTheme.warningColor.withValues(alpha: 0.3)),
               ),
               child: Column(
                 children: [
@@ -559,7 +559,7 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
                           leading: Container(
                             padding: const EdgeInsets.all(AppTheme.spacing6),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryColor.withOpacity(0.1),
+                              color: AppTheme.primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(AppTheme.radius6),
                             ),
                             child: Icon(
@@ -757,7 +757,7 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing12),
             decoration: BoxDecoration(
-              color: AppTheme.infoColor.withOpacity(0.1),
+              color: AppTheme.infoColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppTheme.radius8),
             ),
             child: Row(
@@ -1001,9 +1001,9 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
         Container(
           padding: const EdgeInsets.all(AppTheme.spacing12),
           decoration: BoxDecoration(
-            color: _getPhotoValidationColor().withOpacity(0.1),
+            color: _getPhotoValidationColor().withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppTheme.radius8),
-            border: Border.all(color: _getPhotoValidationColor().withOpacity(0.3)),
+            border: Border.all(color: _getPhotoValidationColor().withValues(alpha: 0.3)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1082,9 +1082,9 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing16),
             decoration: BoxDecoration(
-              color: AppTheme.successColor.withOpacity(0.05),
+              color: AppTheme.successColor.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(AppTheme.radius12),
-              border: Border.all(color: AppTheme.successColor.withOpacity(0.2)),
+              border: Border.all(color: AppTheme.successColor.withValues(alpha: 0.2)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

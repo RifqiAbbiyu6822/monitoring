@@ -379,7 +379,7 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing12),
             decoration: BoxDecoration(
-              color: (_currentCategoryConfig?.color ?? AppTheme.primaryColor).withOpacity(0.1),
+                              color: (_currentCategoryConfig?.color ?? AppTheme.primaryColor).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppTheme.radius12),
             ),
             child: Icon(
@@ -554,9 +554,9 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing16),
             decoration: BoxDecoration(
-              color: AppTheme.successColor.withOpacity(0.1),
+                              color: AppTheme.successColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppTheme.radius12),
-              border: Border.all(color: AppTheme.successColor.withOpacity(0.3)),
+                              border: Border.all(color: AppTheme.successColor.withValues(alpha: 0.3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -686,12 +686,12 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppTheme.infoColor.withOpacity(0.1),
-                AppTheme.primaryColor.withOpacity(0.05),
+                AppTheme.infoColor.withValues(alpha: 0.1),
+                AppTheme.primaryColor.withValues(alpha: 0.05),
               ],
             ),
             borderRadius: BorderRadius.circular(AppTheme.radius12),
-            border: Border.all(color: AppTheme.infoColor.withOpacity(0.2)),
+            border: Border.all(color: AppTheme.infoColor.withValues(alpha: 0.2)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -701,7 +701,7 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
                   Container(
                     padding: const EdgeInsets.all(AppTheme.spacing6),
                     decoration: BoxDecoration(
-                      color: AppTheme.infoColor.withOpacity(0.2),
+                      color: AppTheme.infoColor.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(AppTheme.radius6),
                     ),
                     child: Icon(
@@ -746,9 +746,9 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing16),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.05),
+              color: AppTheme.primaryColor.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(AppTheme.radius12),
-              border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

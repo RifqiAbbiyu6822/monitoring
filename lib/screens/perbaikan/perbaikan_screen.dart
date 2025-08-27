@@ -209,7 +209,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                   vertical: AppTheme.spacing4,
                 ),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
+                                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppTheme.radius8),
                 ),
                 child: Text(
@@ -241,7 +241,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                       });
                     },
                     backgroundColor: AppTheme.backgroundColor,
-                    selectedColor: AppTheme.primaryColor.withOpacity(0.1),
+                                            selectedColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                     labelStyle: TextStyle(
                       color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -259,9 +259,9 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
             Container(
               padding: const EdgeInsets.all(AppTheme.spacing12),
               decoration: BoxDecoration(
-                color: AppTheme.infoColor.withOpacity(0.1),
+                color: AppTheme.infoColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppTheme.radius8),
-                border: Border.all(color: AppTheme.infoColor.withOpacity(0.3)),
+                border: Border.all(color: AppTheme.infoColor.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -333,7 +333,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                 Container(
                   padding: const EdgeInsets.all(AppTheme.spacing16),
                   decoration: BoxDecoration(
-                    color: AppTheme.textTertiary.withOpacity(0.1),
+                    color: AppTheme.textTertiary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radius16),
                   ),
                   child: Icon(
@@ -410,7 +410,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                     Container(
                       padding: const EdgeInsets.all(AppTheme.spacing8),
                       decoration: BoxDecoration(
-                        color: Helpers.getStatusColor(perbaikan.status).withOpacity(0.1),
+                        color: Helpers.getStatusColor(perbaikan.status).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(AppTheme.radius8),
                       ),
                       child: Icon(
@@ -525,7 +525,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                         vertical: AppTheme.spacing4,
                       ),
                       decoration: BoxDecoration(
-                        color: Helpers.getStatusColor(perbaikan.status).withOpacity(0.1),
+                        color: Helpers.getStatusColor(perbaikan.status).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(AppTheme.radius8),
                       ),
                       child: Text(
@@ -543,7 +543,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                         vertical: AppTheme.spacing4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.secondaryColor.withOpacity(0.1),
+                        color: AppTheme.secondaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(AppTheme.radius8),
                       ),
                       child: Text(
@@ -604,7 +604,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                       Container(
                         padding: const EdgeInsets.all(AppTheme.spacing12),
                         decoration: BoxDecoration(
-                          color: AppTheme.infoColor.withOpacity(0.1),
+                          color: AppTheme.infoColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(AppTheme.radius12),
                         ),
                         child: Icon(
@@ -673,7 +673,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                               leading: Container(
                                 padding: const EdgeInsets.all(AppTheme.spacing8),
                                 decoration: BoxDecoration(
-                                  color: Helpers.getPriorityColor(temuan.priority).withOpacity(0.1),
+                                  color: Helpers.getPriorityColor(temuan.priority).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(AppTheme.radius8),
                                 ),
                                 child: Icon(
@@ -710,7 +710,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                                           vertical: AppTheme.spacing2,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Helpers.getPriorityColor(temuan.priority).withOpacity(0.1),
+                                          color: Helpers.getPriorityColor(temuan.priority).withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(AppTheme.radius4),
                                         ),
                                         child: Text(
@@ -785,7 +785,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                         Container(
                           padding: const EdgeInsets.all(AppTheme.spacing12),
                           decoration: BoxDecoration(
-                            color: Helpers.getStatusColor(perbaikan.status).withOpacity(0.1),
+                            color: Helpers.getStatusColor(perbaikan.status).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(AppTheme.radius12),
                           ),
                           child: Icon(

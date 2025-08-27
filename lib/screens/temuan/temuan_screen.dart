@@ -139,6 +139,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
           tabs: const [
             Tab(text: 'Buat Temuan', icon: Icon(Icons.add_circle_outline)),
             Tab(text: 'Daftar Temuan', icon: Icon(Icons.list_alt)),
@@ -169,19 +170,19 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppTheme.infoColor.withOpacity(0.1),
-                  AppTheme.primaryColor.withOpacity(0.05),
+                  AppTheme.infoColor.withValues(alpha: 0.1),
+                  AppTheme.primaryColor.withValues(alpha: 0.05),
                 ],
               ),
               borderRadius: BorderRadius.circular(AppTheme.radius16),
-              border: Border.all(color: AppTheme.infoColor.withOpacity(0.2)),
+              border: Border.all(color: AppTheme.infoColor.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(AppTheme.spacing8),
                   decoration: BoxDecoration(
-                    color: AppTheme.infoColor.withOpacity(0.1),
+                    color: AppTheme.infoColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radius8),
                   ),
                   child: Icon(Icons.info_outline, color: AppTheme.infoColor),
@@ -264,7 +265,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                 Container(
                   padding: const EdgeInsets.all(AppTheme.spacing8),
                   decoration: BoxDecoration(
-                    color: config.color.withOpacity(0.1),
+                    color: config.color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radius12),
                   ),
                   child: Icon(
@@ -301,7 +302,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                     vertical: AppTheme.spacing4,
                   ),
                   decoration: BoxDecoration(
-                    color: config.color.withOpacity(0.1),
+                    color: config.color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radius8),
                   ),
                   child: Text(
@@ -351,7 +352,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                       vertical: AppTheme.spacing4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppTheme.radius8),
                     ),
                     child: Text(
@@ -383,7 +384,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                           });
                         },
                         backgroundColor: AppTheme.backgroundColor,
-                        selectedColor: AppTheme.primaryColor.withOpacity(0.1),
+                        selectedColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                         labelStyle: TextStyle(
                           color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -458,7 +459,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                 Container(
                   padding: const EdgeInsets.all(AppTheme.spacing16),
                   decoration: BoxDecoration(
-                    color: AppTheme.textTertiary.withOpacity(0.1),
+                    color: AppTheme.textTertiary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radius16),
                   ),
                   child: Icon(
@@ -527,7 +528,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                     Container(
                       padding: const EdgeInsets.all(AppTheme.spacing8),
                       decoration: BoxDecoration(
-                        color: (categoryConfig?.color ?? Helpers.getStatusColor(temuan.status)).withOpacity(0.1),
+                        color: (categoryConfig?.color ?? Helpers.getStatusColor(temuan.status)).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(AppTheme.radius8),
                       ),
                       child: Icon(
@@ -599,7 +600,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                         vertical: AppTheme.spacing4,
                       ),
                       decoration: BoxDecoration(
-                        color: Helpers.getPriorityColor(temuan.priority).withOpacity(0.1),
+                        color: Helpers.getPriorityColor(temuan.priority).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(AppTheme.radius8),
                       ),
                       child: Text(
@@ -617,7 +618,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                         vertical: AppTheme.spacing4,
                       ),
                       decoration: BoxDecoration(
-                        color: Helpers.getStatusColor(temuan.status).withOpacity(0.1),
+                        color: Helpers.getStatusColor(temuan.status).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(AppTheme.radius8),
                       ),
                       child: Text(
@@ -681,7 +682,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                         Container(
                           padding: const EdgeInsets.all(AppTheme.spacing12),
                           decoration: BoxDecoration(
-                            color: (categoryConfig?.color ?? Helpers.getStatusColor(temuan.status)).withOpacity(0.1),
+                            color: (categoryConfig?.color ?? Helpers.getStatusColor(temuan.status)).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(AppTheme.radius12),
                           ),
                           child: Icon(
@@ -730,7 +731,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                             vertical: AppTheme.spacing6,
                           ),
                           decoration: BoxDecoration(
-                            color: Helpers.getStatusColor(temuan.status).withOpacity(0.1),
+                            color: Helpers.getStatusColor(temuan.status).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(AppTheme.radius8),
                           ),
                           child: Text(
@@ -748,7 +749,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                             vertical: AppTheme.spacing6,
                           ),
                           decoration: BoxDecoration(
-                            color: Helpers.getPriorityColor(temuan.priority).withOpacity(0.1),
+                            color: Helpers.getPriorityColor(temuan.priority).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(AppTheme.radius8),
                           ),
                           child: Text(
