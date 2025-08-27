@@ -44,7 +44,7 @@ class PriorityInfoWidget extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: AppTheme.spacing12),
               decoration: BoxDecoration(
                 color: isSelected 
-                    ? priorityData.color.withOpacity(0.1) 
+                    ? priorityData.color.withValues(alpha: 0.1) 
                     : AppTheme.surfaceColor,
                 borderRadius: BorderRadius.circular(AppTheme.radius12),
                 border: Border.all(
@@ -67,7 +67,7 @@ class PriorityInfoWidget extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(AppTheme.spacing8),
                           decoration: BoxDecoration(
-                            color: priorityData.color.withOpacity(0.2),
+                            color: priorityData.color.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(AppTheme.radius8),
                           ),
                           child: Icon(
@@ -128,9 +128,9 @@ class PriorityInfoWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing16),
             decoration: BoxDecoration(
-              color: AppTheme.infoColor.withOpacity(0.1),
+                              color: AppTheme.infoColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppTheme.radius12),
-              border: Border.all(color: AppTheme.infoColor.withOpacity(0.3)),
+                              border: Border.all(color: AppTheme.infoColor.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
@@ -163,16 +163,16 @@ class PriorityInfoWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacing16),
       decoration: BoxDecoration(
-        color: priorityData.color.withOpacity(0.1),
+                        color: priorityData.color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppTheme.radius12),
-        border: Border.all(color: priorityData.color.withOpacity(0.3)),
+                  border: Border.all(color: priorityData.color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing8),
             decoration: BoxDecoration(
-              color: priorityData.color.withOpacity(0.2),
+                              color: priorityData.color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(AppTheme.radius8),
             ),
             child: Icon(
@@ -260,7 +260,7 @@ class CategoryInfoWidget extends StatelessWidget {
               
               return Container(
                 decoration: BoxDecoration(
-                  color: isSelected ? config.color.withOpacity(0.1) : AppTheme.surfaceColor,
+                  color: isSelected ? config.color.withValues(alpha: 0.1) : AppTheme.surfaceColor,
                   borderRadius: BorderRadius.circular(AppTheme.radius12),
                   border: Border.all(
                     color: isSelected ? config.color : AppTheme.borderColor,
@@ -281,7 +281,7 @@ class CategoryInfoWidget extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(AppTheme.spacing8),
                             decoration: BoxDecoration(
-                              color: config.color.withOpacity(0.2),
+                              color: config.color.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(AppTheme.radius8),
                             ),
                             child: Icon(
@@ -344,16 +344,16 @@ class CategoryInfoWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacing16),
       decoration: BoxDecoration(
-        color: config.color.withOpacity(0.1),
+        color: config.color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppTheme.radius12),
-        border: Border.all(color: config.color.withOpacity(0.3)),
+        border: Border.all(color: config.color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing12),
             decoration: BoxDecoration(
-              color: config.color.withOpacity(0.2),
+              color: config.color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(AppTheme.radius12),
             ),
             child: Icon(
@@ -440,7 +440,7 @@ class ProgressInfoWidget extends StatelessWidget {
         color: AppTheme.backgroundColor,
         borderRadius: BorderRadius.circular(AppTheme.radius12),
         border: Border.all(
-          color: isOverdue ? AppTheme.errorColor.withOpacity(0.3) : AppTheme.borderColor,
+          color: isOverdue ? AppTheme.errorColor.withValues(alpha: 0.3) : AppTheme.borderColor,
         ),
       ),
       child: Column(
@@ -497,8 +497,8 @@ class ProgressInfoWidget extends StatelessWidget {
               ),
               decoration: BoxDecoration(
                 color: isOverdue 
-                    ? AppTheme.errorColor.withOpacity(0.1)
-                    : AppTheme.infoColor.withOpacity(0.1),
+                            ? AppTheme.errorColor.withValues(alpha: 0.1)
+        : AppTheme.infoColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppTheme.radius8),
               ),
               child: Row(

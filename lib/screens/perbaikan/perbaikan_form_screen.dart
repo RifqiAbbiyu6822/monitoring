@@ -1,14 +1,14 @@
 // lib/screens/perbaikan/perbaikan_form_screen.dart - Updated with Photo Service
 import 'package:flutter/material.dart';
-// ignore: unused_import
-import '../../model/perbaikan.dart';
+
 import '../../model/temuan.dart';
 import '../../services/local_storage_service.dart';
-import '../../services/photo_service.dart';
+
 import '../../widgets/form_components.dart';
 import '../../widgets/photo_widgets.dart';
 import '../../utils/theme.dart';
 import '../../utils/validators.dart';
+import '../../utils/status_validator.dart';
 
 class PerbaikanFormScreen extends StatefulWidget {
   final String? perbaikanId;
@@ -33,7 +33,6 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
   final _costController = TextEditingController();
 
   final LocalStorageService _storageService = LocalStorageService();
-  final PhotoService _photoService = PhotoService();
 
   late TabController _photoTabController;
   late TabController _editPhotoTabController;
@@ -138,9 +137,12 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
       final temuanList = await _storageService.getAllTemuan();
       final perbaikanList = await _storageService.getAllPerbaikan();
       
-      // Filter temuan that don't have perbaikan yet
+      // Filter temuan that don't have perbaikan yet and are not completed
       final temuanWithPerbaikan = perbaikanList.map((p) => p.temuanId).toSet();
-      final availableTemuan = temuanList.where((t) => !temuanWithPerbaikan.contains(t.id)).toList();
+      final availableTemuan = temuanList.where((t) => 
+        !temuanWithPerbaikan.contains(t.id) && 
+        t.status != 'completed'
+      ).toList();
 
       setState(() {
         _availableTemuan = availableTemuan;
@@ -189,6 +191,28 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
       return;
     }
 
+    // Additional validation
+    if (_workDescriptionController.text.trim().isEmpty) {
+      _showErrorSnackBar('Deskripsi pekerjaan harus diisi');
+      return;
+    }
+    if (_contractorController.text.trim().isEmpty) {
+      _showErrorSnackBar('Kontraktor harus diisi');
+      return;
+    }
+    if (_assignedToController.text.trim().isEmpty) {
+      _showErrorSnackBar('Assigned To harus diisi');
+      return;
+    }
+    if (_startDate == null) {
+      _showErrorSnackBar('Tanggal mulai harus dipilih');
+      return;
+    }
+    if (_selectedStatus == null) {
+      _showErrorSnackBar('Status harus dipilih');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -227,7 +251,19 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
 
       Navigator.pop(context, true);
     } catch (e) {
-      _showErrorSnackBar(_isEditMode ? 'Gagal memperbarui perbaikan' : 'Gagal menambah perbaikan');
+      String errorMessage;
+      if (e.toString().contains('UNIQUE constraint failed')) {
+        errorMessage = 'ID perbaikan sudah ada dalam database';
+      } else if (e.toString().contains('NOT NULL constraint failed')) {
+        errorMessage = 'Data wajib tidak boleh kosong';
+      } else if (e.toString().contains('foreign key')) {
+        errorMessage = 'Temuan yang dipilih tidak valid atau sudah dihapus';
+      } else if (e.toString().contains('FOREIGN KEY constraint failed')) {
+        errorMessage = 'Temuan terkait tidak ditemukan';
+      } else {
+        errorMessage = _isEditMode ? 'Gagal memperbarui perbaikan: ${e.toString()}' : 'Gagal menambah perbaikan: ${e.toString()}';
+      }
+      _showErrorSnackBar(errorMessage);
     } finally {
       setState(() {
         _isLoading = false;
@@ -607,10 +643,57 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
           value: _selectedStatus,
           items: _statuses,
           itemText: (status) => _getStatusText(status),
-          onChanged: (value) => setState(() => _selectedStatus = value),
+          onChanged: (value) {
+            setState(() {
+              final oldStatus = _selectedStatus;
+              _selectedStatus = value;
+              
+              // Auto-adjust progress based on status
+              if (value == 'pending') {
+                _progress = 0.0;
+              } else if (value == 'selesai') {
+                _progress = 100.0;
+              } else if (value == 'ongoing' && _progress == 0.0) {
+                _progress = 10.0; // Start with 10% for ongoing
+              }
+              
+              // Validate status transition if in edit mode
+              if (_isEditMode && oldStatus != null) {
+                final validationError = StatusValidator.validatePerbaikanStatusChange(
+                  oldStatus,
+                  value!,
+                  _selectedTemuan?.status ?? 'pending',
+                  progress: _progress,
+                );
+                
+                if (validationError != null) {
+                  // Revert to old status and show error
+                  _selectedStatus = oldStatus;
+                  _showErrorSnackBar(validationError);
+                }
+              }
+            });
+          },
           prefixIcon: const Icon(Icons.info),
           validator: (value) {
             if (value == null) return 'Status harus dipilih';
+            
+            // Additional validation for status requirements
+            final requirements = StatusValidator.getStatusRequirements(value);
+            
+            if (requirements['requiresProgress'] == 100.0 && _progress < 100) {
+              return 'Progress harus 100% untuk status selesai';
+            }
+            
+            if (requirements['requiresEndDate'] == true && _endDate == null) {
+              return 'Tanggal selesai diperlukan untuk status selesai';
+            }
+            
+            if (requirements['requiresPhotos'] == true && 
+                _beforePhotos.isEmpty && _afterPhotos.isEmpty) {
+              return 'Foto dokumentasi diperlukan untuk status selesai';
+            }
+            
             return null;
           },
         ),
@@ -632,6 +715,16 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
                 onDateSelected: (date) => setState(() => _startDate = date),
                 validator: (date) {
                   if (date == null) return 'Tanggal mulai harus dipilih';
+                  final now = DateTime.now();
+                  final today = DateTime(now.year, now.month, now.day);
+                  final selectedDate = DateTime(date.year, date.month, date.day);
+                  
+                  if (selectedDate.isBefore(today.subtract(const Duration(days: 30)))) {
+                    return 'Tanggal mulai tidak boleh lebih dari 30 hari yang lalu';
+                  }
+                  if (selectedDate.isAfter(today.add(const Duration(days: 365)))) {
+                    return 'Tanggal mulai tidak boleh lebih dari 1 tahun ke depan';
+                  }
                   return null;
                 },
               ),
@@ -643,6 +736,18 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
                 selectedDate: _endDate,
                 onDateSelected: (date) => setState(() => _endDate = date),
                 firstDate: _startDate,
+                validator: (date) {
+                  if (date != null && _startDate != null) {
+                    if (date.isBefore(_startDate!)) {
+                      return 'Tanggal selesai tidak boleh sebelum tanggal mulai';
+                    }
+                    final maxDuration = _startDate!.add(const Duration(days: 365 * 2)); // Max 2 tahun
+                    if (date.isAfter(maxDuration)) {
+                      return 'Durasi perbaikan tidak boleh lebih dari 2 tahun';
+                    }
+                  }
+                  return null;
+                },
               ),
             ),
           ],
@@ -689,9 +794,40 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
           min: 0,
           max: 100,
           divisions: 100,
-          onChanged: (value) => setState(() => _progress = value),
+          onChanged: (value) {
+            setState(() {
+              _progress = value;
+              
+              // Auto-suggest status based on progress
+              final suggestedStatus = StatusValidator.suggestNextStatus(_selectedStatus ?? 'pending', progress: value);
+              if (suggestedStatus != null && suggestedStatus != _selectedStatus) {
+                // Show suggestion to user
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Saran: Ubah status ke ${_getStatusText(suggestedStatus)} berdasarkan progress'),
+                        action: SnackBarAction(
+                          label: 'Ubah',
+                          onPressed: () {
+                            setState(() => _selectedStatus = suggestedStatus);
+                          },
+                        ),
+                        duration: const Duration(seconds: 4),
+                      ),
+                    );
+                  }
+                });
+              }
+              
+              // Auto-set end date if progress is 100%
+              if (value >= 100 && _endDate == null) {
+                _endDate = DateTime.now();
+              }
+            });
+          },
           labelBuilder: (value) => _getProgressLabel(value),
-          helperText: 'Geser untuk mengatur progress pekerjaan',
+          helperText: 'Geser untuk mengatur progress pekerjaan. Status akan disarankan secara otomatis.',
         ),
       ],
     );
@@ -860,32 +996,46 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
           ),
         ),
         
-        // Photo summary
+        // Photo summary with validation
         const SizedBox(height: AppTheme.spacing12),
         Container(
           padding: const EdgeInsets.all(AppTheme.spacing12),
           decoration: BoxDecoration(
-            color: AppTheme.infoColor.withOpacity(0.1),
+            color: _getPhotoValidationColor().withOpacity(0.1),
             borderRadius: BorderRadius.circular(AppTheme.radius8),
-            border: Border.all(color: AppTheme.infoColor.withOpacity(0.3)),
+            border: Border.all(color: _getPhotoValidationColor().withOpacity(0.3)),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.info_outline,
-                color: AppTheme.infoColor,
-                size: 16,
+              Row(
+                children: [
+                  Icon(
+                    _getPhotoValidationIcon(),
+                    color: _getPhotoValidationColor(),
+                    size: 16,
+                  ),
+                  const SizedBox(width: AppTheme.spacing8),
+                  Expanded(
+                    child: Text(
+                      'Total: ${_beforePhotos.length + _progressPhotos.length + _afterPhotos.length + _documentationPhotos.length} foto dokumentasi',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: _getPhotoValidationColor(),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: AppTheme.spacing8),
-              Expanded(
-                child: Text(
-                  'Total: ${_beforePhotos.length + _progressPhotos.length + _afterPhotos.length + _documentationPhotos.length} foto dokumentasi',
+              if (_getPhotoValidationMessage().isNotEmpty) ...[
+                const SizedBox(height: AppTheme.spacing4),
+                Text(
+                  _getPhotoValidationMessage(),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.infoColor,
-                    fontWeight: FontWeight.w600,
+                    color: _getPhotoValidationColor(),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -1094,5 +1244,59 @@ class _PerbaikanFormScreenState extends State<PerbaikanFormScreen> with TickerPr
     if (value < 75) return 'Setengah jalan';
     if (value < 100) return 'Hampir selesai';
     return 'Selesai';
+  }
+
+  /// Get photo validation color based on current state
+  Color _getPhotoValidationColor() {
+    if (_selectedStatus == 'selesai') {
+      // For completed status, require before and after photos
+      if (_beforePhotos.isEmpty || _afterPhotos.isEmpty) {
+        return AppTheme.errorColor;
+      }
+      return AppTheme.successColor;
+    } else if (_selectedStatus == 'ongoing') {
+      // For ongoing status, encourage progress photos
+      if (_progressPhotos.isEmpty && _progress > 10) {
+        return AppTheme.warningColor;
+      }
+      return AppTheme.infoColor;
+    }
+    return AppTheme.infoColor;
+  }
+
+  /// Get photo validation icon
+  IconData _getPhotoValidationIcon() {
+    if (_selectedStatus == 'selesai') {
+      if (_beforePhotos.isEmpty || _afterPhotos.isEmpty) {
+        return Icons.error_outline;
+      }
+      return Icons.check_circle_outline;
+    } else if (_selectedStatus == 'ongoing') {
+      if (_progressPhotos.isEmpty && _progress > 10) {
+        return Icons.warning_outlined;
+      }
+      return Icons.info_outline;
+    }
+    return Icons.info_outline;
+  }
+
+  /// Get photo validation message
+  String _getPhotoValidationMessage() {
+    if (_selectedStatus == 'selesai') {
+      final missing = <String>[];
+      if (_beforePhotos.isEmpty) missing.add('foto sebelum');
+      if (_afterPhotos.isEmpty) missing.add('foto sesudah');
+      
+      if (missing.isNotEmpty) {
+        return 'Diperlukan: ${missing.join(' dan ')} untuk status selesai';
+      }
+      return 'Dokumentasi foto lengkap ✓';
+    } else if (_selectedStatus == 'ongoing') {
+      if (_progressPhotos.isEmpty && _progress > 10) {
+        return 'Disarankan: tambahkan foto progress untuk dokumentasi yang lebih baik';
+      }
+      return 'Tambahkan foto sesuai tahapan pekerjaan';
+    }
+    return 'Dokumentasi foto akan membantu tracking progress perbaikan';
   }
 }

@@ -59,7 +59,7 @@ class _EnhancedTextFieldState extends State<EnhancedTextField>
     with SingleTickerProviderStateMixin {
   late FocusNode _focusNode;
   late AnimationController _animationController;
-  late Animation<double> _labelAnimation;
+
   late Animation<Color?> _borderColorAnimation;
 
   bool get _hasText => widget.controller?.text.isNotEmpty ?? false;
@@ -75,9 +75,7 @@ class _EnhancedTextFieldState extends State<EnhancedTextField>
       vsync: this,
     );
 
-    _labelAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
+
 
     _borderColorAnimation = ColorTween(
       begin: AppTheme.borderColor,
@@ -143,7 +141,7 @@ class _EnhancedTextFieldState extends State<EnhancedTextField>
                 boxShadow: _isFocused
                     ? [
                         BoxShadow(
-                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         )
@@ -197,7 +195,7 @@ class _EnhancedTextFieldState extends State<EnhancedTextField>
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: AppTheme.borderColor.withOpacity(0.5),
+                      color: AppTheme.borderColor.withValues(alpha: 0.5),
                       width: 1,
                     ),
                   ),

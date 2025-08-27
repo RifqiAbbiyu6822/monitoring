@@ -22,88 +22,122 @@ class DatabaseService {
   }
 
   Future<Database> _initDatabase() async {
-    Directory documentsDirectory = await getApplicationDocumentsDirectory();
-    String path = join(documentsDirectory.path, 'monitoring_mbz.db');
-    
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _createDatabase,
-    );
+    try {
+      Directory documentsDirectory = await getApplicationDocumentsDirectory();
+      String path = join(documentsDirectory.path, 'monitoring_mbz.db');
+      
+      return await openDatabase(
+        path,
+        version: 1,
+        onCreate: _createDatabase,
+        onOpen: (db) async {
+          // Verify database integrity
+          try {
+            await db.execute('PRAGMA integrity_check');
+            print('Database integrity check passed');
+          } catch (e) {
+            print('Database integrity check failed: $e');
+          }
+        },
+      );
+    } catch (e) {
+      print('Error initializing database: $e');
+      rethrow;
+    }
   }
 
   Future<void> _createDatabase(Database db, int version) async {
-    // Table untuk Temuan
-    await db.execute('''
-      CREATE TABLE temuan (
-        id TEXT PRIMARY KEY,
-        category TEXT NOT NULL,
-        subcategory TEXT NOT NULL,
-        section TEXT NOT NULL,
-        km_point TEXT NOT NULL,
-        lane TEXT NOT NULL,
-        description TEXT NOT NULL,
-        priority TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'pending',
-        latitude REAL DEFAULT 0.0,
-        longitude REAL DEFAULT 0.0,
-        photos TEXT, -- JSON array string
-        created_at TEXT NOT NULL,
-        created_by TEXT NOT NULL,
-        updated_at TEXT,
-        updated_by TEXT,
-        notes TEXT
-      )
-    ''');
+    try {
+      // Table untuk Temuan
+      await db.execute('''
+        CREATE TABLE temuan (
+          id TEXT PRIMARY KEY,
+          category TEXT NOT NULL,
+          subcategory TEXT NOT NULL,
+          section TEXT NOT NULL,
+          km_point TEXT NOT NULL,
+          lane TEXT NOT NULL,
+          description TEXT NOT NULL,
+          priority TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          latitude REAL DEFAULT 0.0,
+          longitude REAL DEFAULT 0.0,
+          photos TEXT, -- JSON array string
+          created_at TEXT NOT NULL,
+          created_by TEXT NOT NULL,
+          updated_at TEXT,
+          updated_by TEXT,
+          notes TEXT
+        )
+      ''');
 
-    // Table untuk Perbaikan
-    await db.execute('''
-      CREATE TABLE perbaikan (
-        id TEXT PRIMARY KEY,
-        temuan_id TEXT NOT NULL,
-        category TEXT NOT NULL,
-        subcategory TEXT NOT NULL,
-        section TEXT NOT NULL,
-        km_point TEXT NOT NULL,
-        lane TEXT NOT NULL,
-        work_description TEXT NOT NULL,
-        contractor TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'pending',
-        start_date TEXT NOT NULL,
-        end_date TEXT,
-        progress REAL DEFAULT 0.0,
-        before_photos TEXT, -- JSON array string
-        progress_photos TEXT, -- JSON array string
-        after_photos TEXT, -- JSON array string
-        documentation_photos TEXT, -- JSON array string for updates
-        assigned_to TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        created_by TEXT NOT NULL,
-        notes TEXT,
-        cost REAL,
-        FOREIGN KEY (temuan_id) REFERENCES temuan (id) ON DELETE CASCADE
-      )
-    ''');
+      // Table untuk Perbaikan
+      await db.execute('''
+        CREATE TABLE perbaikan (
+          id TEXT PRIMARY KEY,
+          temuan_id TEXT NOT NULL,
+          category TEXT NOT NULL,
+          subcategory TEXT NOT NULL,
+          section TEXT NOT NULL,
+          km_point TEXT NOT NULL,
+          lane TEXT NOT NULL,
+          work_description TEXT NOT NULL,
+          contractor TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          start_date TEXT NOT NULL,
+          end_date TEXT,
+          progress REAL DEFAULT 0.0,
+          before_photos TEXT, -- JSON array string
+          progress_photos TEXT, -- JSON array string
+          after_photos TEXT, -- JSON array string
+          documentation_photos TEXT, -- JSON array string for updates
+          assigned_to TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          created_by TEXT NOT NULL,
+          notes TEXT,
+          cost REAL,
+          FOREIGN KEY (temuan_id) REFERENCES temuan (id) ON DELETE CASCADE
+        )
+      ''');
 
-    // Table untuk Settings
-    await db.execute('''
-      CREATE TABLE settings (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL,
-        description TEXT,
-        updated_at TEXT NOT NULL
-      )
-    ''');
+      // Table untuk Settings
+      await db.execute('''
+        CREATE TABLE settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          description TEXT,
+          updated_at TEXT NOT NULL
+        )
+      ''');
 
-    // Indexes untuk optimasi query
-    await db.execute('CREATE INDEX idx_temuan_status ON temuan (status)');
-    await db.execute('CREATE INDEX idx_temuan_priority ON temuan (priority)');
-    await db.execute('CREATE INDEX idx_temuan_created_at ON temuan (created_at)');
-    await db.execute('CREATE INDEX idx_perbaikan_status ON perbaikan (status)');
-    await db.execute('CREATE INDEX idx_perbaikan_temuan_id ON perbaikan (temuan_id)');
+      // Table untuk Activity Logs
+      await db.execute('''
+        CREATE TABLE activity_logs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT,
+          action TEXT NOT NULL,
+          entity_type TEXT NOT NULL,
+          entity_id TEXT,
+          details TEXT,
+          timestamp TEXT NOT NULL
+        )
+      ''');
 
-    // Insert default settings
-    await _insertDefaultSettings(db);
+      // Indexes untuk optimasi query
+      await db.execute('CREATE INDEX idx_temuan_status ON temuan (status)');
+      await db.execute('CREATE INDEX idx_temuan_priority ON temuan (priority)');
+      await db.execute('CREATE INDEX idx_temuan_created_at ON temuan (created_at)');
+      await db.execute('CREATE INDEX idx_perbaikan_status ON perbaikan (status)');
+      await db.execute('CREATE INDEX idx_perbaikan_temuan_id ON perbaikan (temuan_id)');
+      await db.execute('CREATE INDEX idx_activity_logs_timestamp ON activity_logs (timestamp)');
+      await db.execute('CREATE INDEX idx_activity_logs_user_id ON activity_logs (user_id)');
+
+      // Insert default settings
+      await _insertDefaultSettings(db);
+    } catch (e) {
+      print('Error creating database: $e');
+      rethrow;
+    }
   }
 
   Future<void> _insertDefaultSettings(Database db) async {
@@ -132,14 +166,21 @@ class DatabaseService {
 
   Future<List<Temuan>> getAllTemuan() async {
     final db = await database;
+    print('Querying temuan table...');
+    
     final List<Map<String, dynamic>> maps = await db.query(
       'temuan',
       orderBy: 'created_at DESC',
     );
 
-    return List.generate(maps.length, (i) {
+    print('Found ${maps.length} temuan records');
+    
+    final temuanList = List.generate(maps.length, (i) {
       return _mapToTemuan(maps[i]);
     });
+    
+    print('Converted ${temuanList.length} temuan objects');
+    return temuanList;
   }
 
   Future<Temuan?> getTemuanById(String id) async {
@@ -158,78 +199,187 @@ class DatabaseService {
 
   Future<Temuan> addTemuan(Map<String, dynamic> temuanData) async {
     final db = await database;
-    final String id = _generateId();
+    
+    return await db.transaction((txn) async {
+      try {
+        final String id = _generateId();
 
-    final temuan = Temuan(
-      id: id,
-      category: temuanData['category'],
-      subcategory: temuanData['subcategory'],
-      section: temuanData['section'],
-      kmPoint: temuanData['kmPoint'],
-      lane: temuanData['lane'],
-      description: temuanData['description'],
-      priority: temuanData['priority'],
-      status: 'pending',
-      latitude: temuanData['latitude'] ?? 0.0,
-      longitude: temuanData['longitude'] ?? 0.0,
-      photos: List<String>.from(temuanData['photos'] ?? []),
-      createdAt: DateTime.now(),
-      createdBy: temuanData['createdBy'] ?? 'Unknown User',
-      notes: temuanData['notes'],
-    );
+        // Validate required fields
+        if (temuanData['category'] == null || temuanData['category'].toString().isEmpty) {
+          throw ArgumentError('Kategori tidak boleh kosong');
+        }
+        if (temuanData['description'] == null || temuanData['description'].toString().isEmpty) {
+          throw ArgumentError('Deskripsi tidak boleh kosong');
+        }
+        if (temuanData['priority'] == null || temuanData['priority'].toString().isEmpty) {
+          throw ArgumentError('Prioritas tidak boleh kosong');
+        }
 
-    await db.insert('temuan', _temuanToMap(temuan));
-    return temuan;
+        final temuan = Temuan(
+          id: id,
+          category: temuanData['category'],
+          subcategory: temuanData['subcategory'],
+          section: temuanData['section'],
+          kmPoint: temuanData['kmPoint'],
+          lane: temuanData['lane'],
+          description: temuanData['description'],
+          priority: temuanData['priority'],
+          status: 'pending',
+          latitude: temuanData['latitude'] ?? 0.0,
+          longitude: temuanData['longitude'] ?? 0.0,
+          photos: List<String>.from(temuanData['photos'] ?? []),
+          createdAt: DateTime.now(),
+          createdBy: temuanData['createdBy'] ?? 'Unknown User',
+          notes: temuanData['notes'],
+        );
+
+        await txn.insert('temuan', _temuanToMap(temuan));
+        
+        // Add activity log
+        await txn.insert('activity_logs', {
+          'user_id': temuan.createdBy,
+          'action': 'created',
+          'entity_type': 'temuan',
+          'entity_id': temuan.id,
+          'details': 'Temuan baru: ${temuan.category} - ${temuan.description}',
+          'timestamp': DateTime.now().toIso8601String(),
+        });
+        
+        return temuan;
+      } catch (e) {
+        print('Error adding temuan: $e');
+        rethrow;
+      }
+    });
   }
 
   Future<Temuan> updateTemuan(String id, Map<String, dynamic> updateData) async {
     final db = await database;
     
-    // Get existing temuan
-    final existingTemuan = await getTemuanById(id);
-    if (existingTemuan == null) {
-      throw Exception('Temuan not found');
-    }
+    return await db.transaction((txn) async {
+      try {
+        // Get existing temuan
+        final existingMaps = await txn.query(
+          'temuan',
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        
+        if (existingMaps.isEmpty) {
+          throw Exception('Temuan dengan ID $id tidak ditemukan');
+        }
+        
+        final existingTemuan = _mapToTemuan(existingMaps.first);
 
-    final updatedTemuan = Temuan(
-      id: existingTemuan.id,
-      category: updateData['category'] ?? existingTemuan.category,
-      subcategory: updateData['subcategory'] ?? existingTemuan.subcategory,
-      section: updateData['section'] ?? existingTemuan.section,
-      kmPoint: updateData['kmPoint'] ?? existingTemuan.kmPoint,
-      lane: updateData['lane'] ?? existingTemuan.lane,
-      description: updateData['description'] ?? existingTemuan.description,
-      priority: updateData['priority'] ?? existingTemuan.priority,
-      status: updateData['status'] ?? existingTemuan.status,
-      latitude: updateData['latitude'] ?? existingTemuan.latitude,
-      longitude: updateData['longitude'] ?? existingTemuan.longitude,
-      photos: updateData['photos'] != null 
-          ? List<String>.from(updateData['photos']) 
-          : existingTemuan.photos,
-      createdAt: existingTemuan.createdAt,
-      createdBy: existingTemuan.createdBy,
-      updatedAt: DateTime.now(),
-      updatedBy: updateData['updatedBy'],
-      notes: updateData['notes'] ?? existingTemuan.notes,
-    );
+        // Validate update data
+        if (updateData['description'] != null && updateData['description'].toString().isEmpty) {
+          throw ArgumentError('Deskripsi tidak boleh kosong');
+        }
 
-    await db.update(
-      'temuan',
-      _temuanToMap(updatedTemuan),
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+        final updatedTemuan = Temuan(
+          id: existingTemuan.id,
+          category: updateData['category'] ?? existingTemuan.category,
+          subcategory: updateData['subcategory'] ?? existingTemuan.subcategory,
+          section: updateData['section'] ?? existingTemuan.section,
+          kmPoint: updateData['kmPoint'] ?? existingTemuan.kmPoint,
+          lane: updateData['lane'] ?? existingTemuan.lane,
+          description: updateData['description'] ?? existingTemuan.description,
+          priority: updateData['priority'] ?? existingTemuan.priority,
+          status: updateData['status'] ?? existingTemuan.status,
+          latitude: updateData['latitude'] ?? existingTemuan.latitude,
+          longitude: updateData['longitude'] ?? existingTemuan.longitude,
+          photos: updateData['photos'] != null 
+              ? List<String>.from(updateData['photos']) 
+              : existingTemuan.photos,
+          createdAt: existingTemuan.createdAt,
+          createdBy: existingTemuan.createdBy,
+          updatedAt: DateTime.now(),
+          updatedBy: updateData['updatedBy'] ?? 'Unknown User',
+          notes: updateData['notes'] ?? existingTemuan.notes,
+        );
 
-    return updatedTemuan;
+        final affectedRows = await txn.update(
+          'temuan',
+          _temuanToMap(updatedTemuan),
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+
+        if (affectedRows == 0) {
+          throw Exception('Gagal memperbarui temuan');
+        }
+
+        // Add activity log
+        await txn.insert('activity_logs', {
+          'user_id': updatedTemuan.updatedBy,
+          'action': 'updated',
+          'entity_type': 'temuan',
+          'entity_id': updatedTemuan.id,
+          'details': 'Temuan diperbarui: ${updatedTemuan.description}',
+          'timestamp': DateTime.now().toIso8601String(),
+        });
+
+        return updatedTemuan;
+      } catch (e) {
+        print('Error updating temuan: $e');
+        rethrow;
+      }
+    });
   }
 
   Future<void> deleteTemuan(String id) async {
     final db = await database;
-    await db.delete(
-      'temuan',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    
+    return await db.transaction((txn) async {
+      try {
+        // Get temuan details before deletion for logging
+        final temuanMaps = await txn.query(
+          'temuan',
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        
+        if (temuanMaps.isEmpty) {
+          throw Exception('Temuan dengan ID $id tidak ditemukan');
+        }
+        
+        final temuan = _mapToTemuan(temuanMaps.first);
+        
+        // Check if temuan has related perbaikan
+        final relatedPerbaikan = await txn.query(
+          'perbaikan',
+          where: 'temuan_id = ?',
+          whereArgs: [id],
+        );
+        
+        if (relatedPerbaikan.isNotEmpty) {
+          throw Exception('Tidak dapat menghapus temuan yang memiliki ${relatedPerbaikan.length} perbaikan terkait. Hapus perbaikan terlebih dahulu.');
+        }
+        
+        final affectedRows = await txn.delete(
+          'temuan',
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        
+        if (affectedRows == 0) {
+          throw Exception('Gagal menghapus temuan');
+        }
+        
+        // Add activity log
+        await txn.insert('activity_logs', {
+          'user_id': 'system',
+          'action': 'deleted',
+          'entity_type': 'temuan',
+          'entity_id': id,
+          'details': 'Temuan dihapus: ${temuan.description}',
+          'timestamp': DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        print('Error deleting temuan: $e');
+        rethrow;
+      }
+    });
   }
 
   // ==================== PERBAIKAN OPERATIONS ====================
@@ -262,54 +412,66 @@ class DatabaseService {
 
   Future<Perbaikan> addPerbaikan(Map<String, dynamic> perbaikanData) async {
     final db = await database;
-    final String id = _generateId();
-
-    final perbaikan = Perbaikan(
-      id: id,
-      temuanId: perbaikanData['temuanId'],
-      category: perbaikanData['category'],
-      subcategory: perbaikanData['subcategory'],
-      section: perbaikanData['section'],
-      kmPoint: perbaikanData['kmPoint'],
-      lane: perbaikanData['lane'],
-      workDescription: perbaikanData['workDescription'],
-      contractor: perbaikanData['contractor'],
-      status: perbaikanData['status'] ?? 'pending',
-      startDate: perbaikanData['startDate'] != null 
-          ? DateTime.parse(perbaikanData['startDate']) 
-          : DateTime.now(),
-      endDate: perbaikanData['endDate'] != null 
-          ? DateTime.parse(perbaikanData['endDate']) 
-          : null,
-      progress: perbaikanData['progress']?.toDouble() ?? 0.0,
-      beforePhotos: List<String>.from(perbaikanData['beforePhotos'] ?? []),
-      progressPhotos: List<String>.from(perbaikanData['progressPhotos'] ?? []),
-      afterPhotos: List<String>.from(perbaikanData['afterPhotos'] ?? []),
-      documentationPhotos: perbaikanData['documentationPhotos'] != null
-          ? List<String>.from(perbaikanData['documentationPhotos'])
-          : null,
-      assignedTo: perbaikanData['assignedTo'],
-      createdAt: DateTime.now(),
-      createdBy: perbaikanData['createdBy'] ?? 'Unknown User',
-      notes: perbaikanData['notes'],
-      cost: perbaikanData['cost']?.toDouble(),
-    );
-
-    await db.insert('perbaikan', _perbaikanToMap(perbaikan));
     
-    // Update temuan status to in_progress
-    await db.update(
-      'temuan',
-      {
-        'status': 'in_progress',
-        'updated_at': DateTime.now().toIso8601String(),
-        'updated_by': perbaikan.createdBy,
-      },
-      where: 'id = ?',
-      whereArgs: [perbaikan.temuanId],
-    );
+    return await db.transaction((txn) async {
+      final String id = _generateId();
 
-    return perbaikan;
+      final perbaikan = Perbaikan(
+        id: id,
+        temuanId: perbaikanData['temuanId'],
+        category: perbaikanData['category'],
+        subcategory: perbaikanData['subcategory'],
+        section: perbaikanData['section'],
+        kmPoint: perbaikanData['kmPoint'],
+        lane: perbaikanData['lane'],
+        workDescription: perbaikanData['workDescription'],
+        contractor: perbaikanData['contractor'],
+        status: perbaikanData['status'] ?? 'pending',
+        startDate: perbaikanData['startDate'] != null 
+            ? DateTime.parse(perbaikanData['startDate']) 
+            : DateTime.now(),
+        endDate: perbaikanData['endDate'] != null 
+            ? DateTime.parse(perbaikanData['endDate']) 
+            : null,
+        progress: perbaikanData['progress']?.toDouble() ?? 0.0,
+        beforePhotos: List<String>.from(perbaikanData['beforePhotos'] ?? []),
+        progressPhotos: List<String>.from(perbaikanData['progressPhotos'] ?? []),
+        afterPhotos: List<String>.from(perbaikanData['afterPhotos'] ?? []),
+        documentationPhotos: perbaikanData['documentationPhotos'] != null
+            ? List<String>.from(perbaikanData['documentationPhotos'])
+            : null,
+        assignedTo: perbaikanData['assignedTo'],
+        createdAt: DateTime.now(),
+        createdBy: perbaikanData['createdBy'] ?? 'Unknown User',
+        notes: perbaikanData['notes'],
+        cost: perbaikanData['cost']?.toDouble(),
+      );
+
+      await txn.insert('perbaikan', _perbaikanToMap(perbaikan));
+      
+      // Update temuan status to in_progress
+      await txn.update(
+        'temuan',
+        {
+          'status': 'in_progress',
+          'updated_at': DateTime.now().toIso8601String(),
+          'updated_by': perbaikan.createdBy,
+        },
+        where: 'id = ?',
+        whereArgs: [perbaikan.temuanId],
+      );
+
+      // Add activity log
+      await addActivityLog(
+        action: 'created',
+        entityType: 'perbaikan',
+        entityId: perbaikan.id,
+        userId: perbaikan.createdBy,
+        details: 'Perbaikan baru: ${perbaikan.workDescription}',
+      );
+
+      return perbaikan;
+    });
   }
 
   Future<Perbaikan> updatePerbaikan(String id, Map<String, dynamic> updateData) async {
@@ -365,12 +527,22 @@ class DatabaseService {
       whereArgs: [id],
     );
 
-    // Update temuan status if perbaikan is completed
-    if (updatedPerbaikan.status == 'selesai' && existingPerbaikan.status != 'selesai') {
+    // Update temuan status based on perbaikan status
+    String newTemuanStatus = 'pending';
+    if (updatedPerbaikan.status == 'ongoing') {
+      newTemuanStatus = 'in_progress';
+    } else if (updatedPerbaikan.status == 'selesai') {
+      newTemuanStatus = 'completed';
+    } else if (updatedPerbaikan.status == 'cancelled') {
+      newTemuanStatus = 'pending'; // Reset to pending if cancelled
+    }
+    
+    // Only update if status actually changed
+    if (existingPerbaikan.status != updatedPerbaikan.status) {
       await db.update(
         'temuan',
         {
-          'status': 'completed',
+          'status': newTemuanStatus,
           'updated_at': DateTime.now().toIso8601String(),
           'updated_by': 'system',
         },
@@ -385,18 +557,21 @@ class DatabaseService {
   Future<void> deletePerbaikan(String id) async {
     final db = await database;
     
-    // Get perbaikan for temuan update
-    final perbaikan = await getPerbaikanById(id);
-    
-    await db.delete(
-      'perbaikan',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.transaction((txn) async {
+      // Get perbaikan for temuan update
+      final perbaikan = await getPerbaikanById(id);
+      if (perbaikan == null) {
+        throw Exception('Perbaikan tidak ditemukan');
+      }
+      
+      await txn.delete(
+        'perbaikan',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
 
-    // Reset temuan status to pending
-    if (perbaikan != null) {
-      await db.update(
+      // Reset temuan status to pending
+      await txn.update(
         'temuan',
         {
           'status': 'pending',
@@ -406,7 +581,16 @@ class DatabaseService {
         where: 'id = ?',
         whereArgs: [perbaikan.temuanId],
       );
-    }
+
+      // Add activity log
+      await addActivityLog(
+        action: 'deleted',
+        entityType: 'perbaikan',
+        entityId: id,
+        userId: 'system',
+        details: 'Perbaikan dihapus: ${perbaikan.workDescription}',
+      );
+    });
   }
 
   // ==================== STATISTICS ====================
@@ -414,48 +598,62 @@ class DatabaseService {
   Future<Map<String, int>> getSummaryStatistics() async {
     final db = await database;
 
-    final temuanCount = Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(*) FROM temuan')
-    ) ?? 0;
+    try {
+      final temuanCount = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM temuan')
+      ) ?? 0;
 
-    final temuanPending = Sqflite.firstIntValue(
-      await db.rawQuery("SELECT COUNT(*) FROM temuan WHERE status = 'pending'")
-    ) ?? 0;
+      final temuanPending = Sqflite.firstIntValue(
+        await db.rawQuery("SELECT COUNT(*) FROM temuan WHERE status = 'pending'")
+      ) ?? 0;
 
-    final temuanInProgress = Sqflite.firstIntValue(
-      await db.rawQuery("SELECT COUNT(*) FROM temuan WHERE status = 'in_progress'")
-    ) ?? 0;
+      final temuanInProgress = Sqflite.firstIntValue(
+        await db.rawQuery("SELECT COUNT(*) FROM temuan WHERE status = 'in_progress'")
+      ) ?? 0;
 
-    final temuanCompleted = Sqflite.firstIntValue(
-      await db.rawQuery("SELECT COUNT(*) FROM temuan WHERE status = 'completed'")
-    ) ?? 0;
+      final temuanCompleted = Sqflite.firstIntValue(
+        await db.rawQuery("SELECT COUNT(*) FROM temuan WHERE status = 'completed'")
+      ) ?? 0;
 
-    final perbaikanCount = Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(*) FROM perbaikan')
-    ) ?? 0;
+      final perbaikanCount = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM perbaikan')
+      ) ?? 0;
 
-    final perbaikanPending = Sqflite.firstIntValue(
-      await db.rawQuery("SELECT COUNT(*) FROM perbaikan WHERE status = 'pending'")
-    ) ?? 0;
+      final perbaikanPending = Sqflite.firstIntValue(
+        await db.rawQuery("SELECT COUNT(*) FROM perbaikan WHERE status = 'pending'")
+      ) ?? 0;
 
-    final perbaikanOngoing = Sqflite.firstIntValue(
-      await db.rawQuery("SELECT COUNT(*) FROM perbaikan WHERE status = 'ongoing'")
-    ) ?? 0;
+      final perbaikanOngoing = Sqflite.firstIntValue(
+        await db.rawQuery("SELECT COUNT(*) FROM perbaikan WHERE status = 'ongoing'")
+      ) ?? 0;
 
-    final perbaikanCompleted = Sqflite.firstIntValue(
-      await db.rawQuery("SELECT COUNT(*) FROM perbaikan WHERE status = 'selesai'")
-    ) ?? 0;
+      final perbaikanCompleted = Sqflite.firstIntValue(
+        await db.rawQuery("SELECT COUNT(*) FROM perbaikan WHERE status = 'selesai'")
+      ) ?? 0;
 
-    return {
-      'totalTemuan': temuanCount,
-      'temuanPending': temuanPending,
-      'temuanInProgress': temuanInProgress,
-      'temuanCompleted': temuanCompleted,
-      'totalPerbaikan': perbaikanCount,
-      'perbaikanPending': perbaikanPending,
-      'perbaikanOngoing': perbaikanOngoing,
-      'perbaikanCompleted': perbaikanCompleted,
-    };
+      return {
+        'totalTemuan': temuanCount,
+        'temuanPending': temuanPending,
+        'temuanInProgress': temuanInProgress,
+        'temuanCompleted': temuanCompleted,
+        'totalPerbaikan': perbaikanCount,
+        'perbaikanPending': perbaikanPending,
+        'perbaikanOngoing': perbaikanOngoing,
+        'perbaikanCompleted': perbaikanCompleted,
+      };
+    } catch (e) {
+      print('Error getting summary statistics: $e');
+      return {
+        'totalTemuan': 0,
+        'temuanPending': 0,
+        'temuanInProgress': 0,
+        'temuanCompleted': 0,
+        'totalPerbaikan': 0,
+        'perbaikanPending': 0,
+        'perbaikanOngoing': 0,
+        'perbaikanCompleted': 0,
+      };
+    }
   }
 
   Future<Map<String, int>> getCategoryStatistics() async {
@@ -513,32 +711,61 @@ class DatabaseService {
   Future<void> importData(Map<String, dynamic> backupData) async {
     final db = await database;
     
+    // Validate backup data structure
+    if (backupData['data'] == null) {
+      throw Exception('Data backup tidak valid: struktur data tidak ditemukan');
+    }
+    
+    final data = backupData['data'] as Map<String, dynamic>;
+    
     await db.transaction((txn) async {
       // Clear existing data
       await txn.delete('temuan');
       await txn.delete('perbaikan');
       await txn.delete('settings');
 
-      final data = backupData['data'] as Map<String, dynamic>;
-      
-      // Import temuan
+      // Import temuan with validation
       if (data['temuan'] != null) {
-        for (final temuan in data['temuan'] as List) {
-          await txn.insert('temuan', temuan as Map<String, dynamic>);
+        final temuanList = data['temuan'] as List;
+        for (final temuan in temuanList) {
+          if (temuan is Map<String, dynamic>) {
+            // Validate required fields
+            if (temuan['id'] == null || temuan['category'] == null || temuan['description'] == null) {
+              print('Warning: Skipping invalid temuan data: missing required fields');
+              continue;
+            }
+            await txn.insert('temuan', temuan);
+          }
         }
       }
       
-      // Import perbaikan
+      // Import perbaikan with validation
       if (data['perbaikan'] != null) {
-        for (final perbaikan in data['perbaikan'] as List) {
-          await txn.insert('perbaikan', perbaikan as Map<String, dynamic>);
+        final perbaikanList = data['perbaikan'] as List;
+        for (final perbaikan in perbaikanList) {
+          if (perbaikan is Map<String, dynamic>) {
+            // Validate required fields
+            if (perbaikan['id'] == null || perbaikan['temuan_id'] == null || perbaikan['work_description'] == null) {
+              print('Warning: Skipping invalid perbaikan data: missing required fields');
+              continue;
+            }
+            await txn.insert('perbaikan', perbaikan);
+          }
         }
       }
       
-      // Import settings
+      // Import settings with validation
       if (data['settings'] != null) {
-        for (final setting in data['settings'] as List) {
-          await txn.insert('settings', setting as Map<String, dynamic>);
+        final settingsList = data['settings'] as List;
+        for (final setting in settingsList) {
+          if (setting is Map<String, dynamic>) {
+            // Validate required fields
+            if (setting['key'] == null || setting['value'] == null) {
+              print('Warning: Skipping invalid setting data: missing required fields');
+              continue;
+            }
+            await txn.insert('settings', setting);
+          }
         }
       }
     });
@@ -633,7 +860,21 @@ class DatabaseService {
   }
 
   Future<void> cleanupOldLogs({int daysToKeep = 90}) async {
-    // Implementation for future use
+    try {
+      final db = await database;
+      final cutoffDate = DateTime.now().subtract(Duration(days: daysToKeep));
+      
+      // Clean up old activity logs if table exists
+      await db.execute('''
+        DELETE FROM activity_logs 
+        WHERE timestamp < ?
+      ''', [cutoffDate.toIso8601String()]);
+      
+      print('Cleaned up logs older than $daysToKeep days');
+    } catch (e) {
+      print('Error cleaning up old logs: $e');
+      // Table might not exist, which is fine
+    }
   }
 
   // ==================== HELPER METHODS ====================
@@ -661,40 +902,53 @@ class DatabaseService {
   }
 
   Temuan _mapToTemuan(Map<String, dynamic> map) {
-    List<String> photos = [];
-    if (map['photos'] != null && map['photos'].isNotEmpty) {
-      try {
-        final photosData = jsonDecode(map['photos']);
-        if (photosData is List) {
-          photos = photosData.cast<String>();
+    try {
+      List<String> photos = [];
+      if (map['photos'] != null && map['photos'].isNotEmpty) {
+        try {
+          final photosData = jsonDecode(map['photos']);
+          if (photosData is List) {
+            photos = photosData.cast<String>();
+          }
+        } catch (e) {
+          // Fallback for old comma-separated format
+          if (map['photos'] is String) {
+            photos = map['photos'].split(',').where((p) => p.isNotEmpty).toList();
+          } else if (map['photos'] is List) {
+            photos = map['photos'].cast<String>();
+          }
         }
-      } catch (e) {
-        // Fallback for old comma-separated format
-        photos = map['photos'].split(',').where((p) => p.isNotEmpty).toList();
       }
-    }
 
-    return Temuan(
-      id: map['id'],
-      category: map['category'],
-      subcategory: map['subcategory'],
-      section: map['section'],
-      kmPoint: map['km_point'],
-      lane: map['lane'],
-      description: map['description'],
-      priority: map['priority'],
-      status: map['status'],
-      latitude: map['latitude'] ?? 0.0,
-      longitude: map['longitude'] ?? 0.0,
-      photos: photos,
-      createdAt: DateTime.parse(map['created_at']),
-      createdBy: map['created_by'],
-      updatedAt: map['updated_at'] != null 
-          ? DateTime.parse(map['updated_at']) 
-          : null,
-      updatedBy: map['updated_by'],
-      notes: map['notes'],
-    );
+      final temuan = Temuan(
+        id: map['id'],
+        category: map['category'],
+        subcategory: map['subcategory'],
+        section: map['section'],
+        kmPoint: map['km_point'],
+        lane: map['lane'],
+        description: map['description'],
+        priority: map['priority'],
+        status: map['status'],
+        latitude: map['latitude'] ?? 0.0,
+        longitude: map['longitude'] ?? 0.0,
+        photos: photos,
+        createdAt: DateTime.parse(map['created_at']),
+        createdBy: map['created_by'],
+        updatedAt: map['updated_at'] != null 
+            ? DateTime.parse(map['updated_at']) 
+            : null,
+        updatedBy: map['updated_by'],
+        notes: map['notes'],
+      );
+      
+      print('Mapped temuan: ${temuan.id} - ${temuan.description}');
+      return temuan;
+    } catch (e) {
+      print('Error mapping temuan: $e');
+      print('Map data: $map');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> _perbaikanToMap(Perbaikan perbaikan) {
@@ -764,13 +1018,25 @@ class DatabaseService {
     } catch (e) {
       // Fallback for old comma-separated format
       if (map['before_photos'] != null) {
-        beforePhotos = map['before_photos'].split(',').where((p) => p.isNotEmpty).toList();
+        if (map['before_photos'] is String) {
+          beforePhotos = map['before_photos'].split(',').where((p) => p.isNotEmpty).toList();
+        } else if (map['before_photos'] is List) {
+          beforePhotos = map['before_photos'].cast<String>();
+        }
       }
       if (map['progress_photos'] != null) {
-        progressPhotos = map['progress_photos'].split(',').where((p) => p.isNotEmpty).toList();
+        if (map['progress_photos'] is String) {
+          progressPhotos = map['progress_photos'].split(',').where((p) => p.isNotEmpty).toList();
+        } else if (map['progress_photos'] is List) {
+          progressPhotos = map['progress_photos'].cast<String>();
+        }
       }
       if (map['after_photos'] != null) {
-        afterPhotos = map['after_photos'].split(',').where((p) => p.isNotEmpty).toList();
+        if (map['after_photos'] is String) {
+          afterPhotos = map['after_photos'].split(',').where((p) => p.isNotEmpty).toList();
+        } else if (map['after_photos'] is List) {
+          afterPhotos = map['after_photos'].cast<String>();
+        }
       }
     }
 
@@ -814,26 +1080,51 @@ class DatabaseService {
     DateTime? endDate,
   }) async {
     final db = await database;
+    
+    final conditions = <String>[];
+    final args = <dynamic>[];
+    
+    if (query != null && query.isNotEmpty) {
+      conditions.add('(description LIKE ? OR category LIKE ? OR subcategory LIKE ?)');
+      args.addAll(['%$query%', '%$query%', '%$query%']);
+    }
+    
+    if (category != null && category.isNotEmpty) {
+      conditions.add('category = ?');
+      args.add(category);
+    }
+    
+    if (status != null && status.isNotEmpty) {
+      conditions.add('status = ?');
+      args.add(status);
+    }
+    
+    if (priority != null && priority.isNotEmpty) {
+      conditions.add('priority = ?');
+      args.add(priority);
+    }
+    
+    if (section != null && section.isNotEmpty) {
+      conditions.add('section = ?');
+      args.add(section);
+    }
+    
+    if (startDate != null) {
+      conditions.add('created_at >= ?');
+      args.add(startDate.toIso8601String());
+    }
+    
+    if (endDate != null) {
+      conditions.add('created_at <= ?');
+      args.add(endDate.toIso8601String());
+    }
+    
+    final whereClause = conditions.isNotEmpty ? conditions.join(' AND ') : null;
+    
     final List<Map<String, dynamic>> maps = await db.query(
       'temuan',
-      where: _buildSearchWhereClause([
-        if (query != null) 'description LIKE ? OR category LIKE ? OR subcategory LIKE ?',
-        if (category != null) 'category = ?',
-        if (status != null) 'status = ?',
-        if (priority != null) 'priority = ?',
-        if (section != null) 'section = ?',
-        if (startDate != null) 'created_at >= ?',
-        if (endDate != null) 'created_at <= ?',
-      ]),
-      whereArgs: _buildSearchWhereArgs([
-        if (query != null) [query, query, query],
-        if (category != null) [category],
-        if (status != null) [status],
-        if (priority != null) [priority],
-        if (section != null) [section],
-        if (startDate != null) [startDate.toIso8601String()],
-        if (endDate != null) [endDate.toIso8601String()],
-      ]),
+      where: whereClause,
+      whereArgs: args.isNotEmpty ? args : null,
       orderBy: 'created_at DESC',
     );
     return List.generate(maps.length, (i) => _mapToTemuan(maps[i]));
@@ -848,36 +1139,52 @@ class DatabaseService {
     DateTime? endDate,
   }) async {
     final db = await database;
+    
+    final conditions = <String>[];
+    final args = <dynamic>[];
+    
+    if (query != null && query.isNotEmpty) {
+      conditions.add('(work_description LIKE ? OR category LIKE ? OR subcategory LIKE ?)');
+      args.addAll(['%$query%', '%$query%', '%$query%']);
+    }
+    
+    if (status != null && status.isNotEmpty) {
+      conditions.add('status = ?');
+      args.add(status);
+    }
+    
+    if (contractor != null && contractor.isNotEmpty) {
+      conditions.add('contractor = ?');
+      args.add(contractor);
+    }
+    
+    if (assignedTo != null && assignedTo.isNotEmpty) {
+      conditions.add('assigned_to = ?');
+      args.add(assignedTo);
+    }
+    
+    if (startDate != null) {
+      conditions.add('start_date >= ?');
+      args.add(startDate.toIso8601String());
+    }
+    
+    if (endDate != null) {
+      conditions.add('end_date <= ?');
+      args.add(endDate.toIso8601String());
+    }
+    
+    final whereClause = conditions.isNotEmpty ? conditions.join(' AND ') : null;
+    
     final List<Map<String, dynamic>> maps = await db.query(
       'perbaikan',
-      where: _buildSearchWhereClause([
-        if (query != null) 'work_description LIKE ? OR category LIKE ? OR subcategory LIKE ?',
-        if (status != null) 'status = ?',
-        if (contractor != null) 'contractor = ?',
-        if (assignedTo != null) 'assigned_to = ?',
-        if (startDate != null) 'start_date >= ?',
-        if (endDate != null) 'end_date <= ?',
-      ]),
-      whereArgs: _buildSearchWhereArgs([
-        if (query != null) [query, query, query],
-        if (status != null) [status],
-        if (contractor != null) [contractor],
-        if (assignedTo != null) [assignedTo],
-        if (startDate != null) [startDate.toIso8601String()],
-        if (endDate != null) [endDate.toIso8601String()],
-      ]),
+      where: whereClause,
+      whereArgs: args.isNotEmpty ? args : null,
       orderBy: 'created_at DESC',
     );
     return List.generate(maps.length, (i) => _mapToPerbaikan(maps[i]));
   }
 
-  String _buildSearchWhereClause(List<String> conditions) {
-    return conditions.isNotEmpty ? conditions.join(' AND ') : '';
-  }
-
-  List<dynamic> _buildSearchWhereArgs(List<List<dynamic>> args) {
-    return args.expand((arg) => arg).toList();
-  }
+  // Helper methods removed as they are no longer needed after search logic improvements
 
   // ==================== STATISTICS METHODS ====================
 
@@ -924,19 +1231,58 @@ class DatabaseService {
 
   // ==================== ACTIVITY LOGS ====================
 
+  Future<void> addActivityLog({
+    required String action,
+    required String entityType,
+    String? entityId,
+    String? userId,
+    String? details,
+  }) async {
+    try {
+      // Validate required parameters
+      if (action.isEmpty) {
+        print('Warning: Activity log action is empty');
+        return;
+      }
+      if (entityType.isEmpty) {
+        print('Warning: Activity log entity type is empty');
+        return;
+      }
+
+      final db = await database;
+      await db.insert('activity_logs', {
+        'user_id': userId ?? 'system',
+        'action': action,
+        'entity_type': entityType,
+        'entity_id': entityId,
+        'details': details,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      print('Error adding activity log: $e');
+      // Don't throw error for activity logs as they're not critical
+      // But log the error for debugging
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getActivityLogs({
     int limit = 50,
     String? userId,
   }) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'activity_logs',
-      where: userId != null ? 'user_id = ?' : null,
-      whereArgs: userId != null ? [userId] : null,
-      orderBy: 'timestamp DESC',
-      limit: limit,
-    );
-    return maps;
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        'activity_logs',
+        where: userId != null ? 'user_id = ?' : null,
+        whereArgs: userId != null ? [userId] : null,
+        orderBy: 'timestamp DESC',
+        limit: limit,
+      );
+      return maps;
+    } catch (e) {
+      print('Error getting activity logs: $e');
+      return [];
+    }
   }
 
   // ==================== CLOSE DATABASE ====================

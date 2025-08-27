@@ -98,7 +98,7 @@ class _EnhancedCardState extends State<EnhancedCard>
               borderRadius: widget.borderRadius ?? BorderRadius.circular(16.0),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: _elevationAnimation.value * 2,
                   offset: Offset(0, _elevationAnimation.value),
                   spreadRadius: 0,

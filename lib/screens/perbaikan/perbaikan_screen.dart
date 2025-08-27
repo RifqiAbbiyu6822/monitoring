@@ -361,8 +361,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppTheme.spacing20),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                Column(
                   children: [
                     ElevatedButton.icon(
                       onPressed: _navigateToPerbaikanForm,
@@ -370,7 +369,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
                       label: const Text('Tambah Perbaikan'),
                     ),
                     if (_availableTemuan.isNotEmpty) ...[
-                      const SizedBox(width: AppTheme.spacing12),
+                      const SizedBox(height: AppTheme.spacing8),
                       OutlinedButton.icon(
                         onPressed: _showAvailableTemuanDialog,
                         icon: const Icon(Icons.build_circle_outlined),
@@ -1028,7 +1027,12 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
             borderRadius: BorderRadius.circular(AppTheme.radius12),
             border: Border.all(color: AppTheme.borderColor),
           ),
-          child: Column(children: children),
+          child: Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: children,
+            ),
+          ),
         ),
       ],
     );
@@ -1229,23 +1233,36 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
         return;
       }
 
+      // Validate progress value
+      if (progress < 0 || progress > 100) {
+        _showErrorSnackBar('Progress harus antara 0-100%');
+        return;
+      }
+
       // Merge existing documentation photos with new progress photos
       List<String> updatedDocumentationPhotos = List.from(currentPerbaikan.documentationPhotos ?? []);
-      updatedDocumentationPhotos.addAll(progressPhotos);
+      if (progressPhotos.isNotEmpty) {
+        updatedDocumentationPhotos.addAll(progressPhotos);
+      }
 
       final updateData = {
         'progress': progress,
         'status': status,
         'notes': notes.isEmpty ? null : notes,
         'documentationPhotos': updatedDocumentationPhotos,
-        if (status == 'selesai') 'endDate': DateTime.now().toIso8601String(),
+        'updatedBy': 'Current User',
       };
+
+      // Set end date if completed
+      if (status == 'selesai' && currentPerbaikan.status != 'selesai') {
+        updateData['endDate'] = DateTime.now().toIso8601String();
+      }
 
       await _storageService.updatePerbaikan(perbaikanId, updateData);
       _showSuccessSnackBar('Progress berhasil diupdate');
       _loadData();
     } catch (e) {
-      _showErrorSnackBar('Gagal mengupdate progress');
+      _showErrorSnackBar('Gagal mengupdate progress: ${e.toString()}');
     }
   }
 
@@ -1297,7 +1314,7 @@ class _PerbaikanScreenState extends State<PerbaikanScreen> {
       _showSuccessSnackBar('Perbaikan berhasil dihapus');
       _loadData();
     } catch (e) {
-      _showErrorSnackBar('Gagal menghapus perbaikan');
+      _showErrorSnackBar('Gagal menghapus perbaikan: ${e.toString()}');
     }
   }
 

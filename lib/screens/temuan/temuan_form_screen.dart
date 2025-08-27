@@ -7,7 +7,7 @@ import '../../utils/theme.dart';
 import '../../utils/validators.dart';
 import '../../services/local_storage_service.dart';
 import '../../services/location_service.dart';
-import '../../services/photo_service.dart';
+
 import '../../config/category_config.dart';
 
 class TemuanFormScreen extends StatefulWidget {
@@ -34,7 +34,6 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
 
   final LocalStorageService _storageService = LocalStorageService();
   final LocationService _locationService = LocationService();
-  final PhotoService _photoService = PhotoService();
 
   String? _selectedCategory;
   String? _selectedSubcategory;
@@ -178,6 +177,24 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
       return;
     }
 
+    // Additional validation
+    if (_selectedCategory == null) {
+      _showErrorSnackBar('Kategori harus dipilih');
+      return;
+    }
+    if (_selectedSubcategory == null) {
+      _showErrorSnackBar('Subkategori harus dipilih');
+      return;
+    }
+    if (_selectedSection == null) {
+      _showErrorSnackBar('Seksi harus dipilih');
+      return;
+    }
+    if (_selectedPriority == null) {
+      _showErrorSnackBar('Prioritas harus dipilih');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -208,7 +225,17 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
 
       Navigator.pop(context, true);
     } catch (e) {
-      _showErrorSnackBar(_isEditMode ? 'Gagal memperbarui temuan' : 'Gagal menambah temuan');
+      String errorMessage;
+      if (e.toString().contains('UNIQUE constraint failed')) {
+        errorMessage = 'ID temuan sudah ada dalam database';
+      } else if (e.toString().contains('NOT NULL constraint failed')) {
+        errorMessage = 'Data wajib tidak boleh kosong';
+      } else if (e.toString().contains('foreign key')) {
+        errorMessage = 'Referensi data tidak valid';
+      } else {
+        errorMessage = _isEditMode ? 'Gagal memperbarui temuan: ${e.toString()}' : 'Gagal menambah temuan: ${e.toString()}';
+      }
+      _showErrorSnackBar(errorMessage);
     } finally {
       setState(() {
         _isLoading = false;
@@ -617,6 +644,10 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
                     final lat = double.tryParse(value);
                     if (lat == null) return 'Format latitude tidak valid';
                     if (lat < -90 || lat > 90) return 'Latitude harus antara -90 dan 90';
+                    // Validasi untuk wilayah Indonesia (approximate bounds)
+                    if (lat < -11.0 || lat > 6.0) {
+                      return 'Latitude di luar wilayah Indonesia (-11.0 s/d 6.0)';
+                    }
                   }
                   return null;
                 },
@@ -635,6 +666,10 @@ class _TemuanFormScreenState extends State<TemuanFormScreen> {
                     final lng = double.tryParse(value);
                     if (lng == null) return 'Format longitude tidak valid';
                     if (lng < -180 || lng > 180) return 'Longitude harus antara -180 dan 180';
+                    // Validasi untuk wilayah Indonesia (approximate bounds)
+                    if (lng < 95.0 || lng > 141.0) {
+                      return 'Longitude di luar wilayah Indonesia (95.0 s/d 141.0)';
+                    }
                   }
                   return null;
                 },

@@ -31,6 +31,13 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadTemuanData();
+    
+    // Add listener to refresh data when tab changes
+    _tabController.addListener(() {
+      if (_tabController.index == 1) { // Daftar Temuan tab
+        _loadTemuanData();
+      }
+    });
   }
 
   @override
@@ -40,21 +47,36 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
   }
 
   Future<void> _loadTemuanData() async {
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final temuanList = await _storageService.getAllTemuan();
-      setState(() {
-        _temuanList = temuanList;
-        _isLoading = false;
-      });
+      print('Loading temuan data...');
+      final temuanList = await _storageService.getAllTemuan(forceRefresh: true);
+      print('Loaded ${temuanList.length} temuan');
+      
+      if (mounted) {
+        setState(() {
+          _temuanList = temuanList;
+          _isLoading = false;
+        });
+      }
+      
+      // Debug: Print first few items
+      if (temuanList.isNotEmpty) {
+        print('First temuan: ${temuanList.first.description}');
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showErrorSnackBar('Gagal memuat data temuan');
+      print('Error loading temuan data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showErrorSnackBar('Gagal memuat data temuan: ${e.toString()}');
+      }
     }
   }
 
@@ -77,6 +99,8 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
   }
 
   void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -90,6 +114,8 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
   }
 
   void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -104,30 +130,27 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: AppTheme.backgroundColor,
-        appBar: AppBar(
-          title: const Text('Temuan'),
-          centerTitle: true,
-          backgroundColor: AppTheme.surfaceColor,
-          elevation: 0,
-          bottom: TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(text: 'Buat Temuan', icon: Icon(Icons.add_circle_outline)),
-              Tab(text: 'Daftar Temuan', icon: Icon(Icons.list_alt)),
-            ],
-          ),
-        ),
-        body: TabBarView(
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        title: const Text('Temuan'),
+        centerTitle: true,
+        backgroundColor: AppTheme.surfaceColor,
+        elevation: 0,
+        bottom: TabBar(
           controller: _tabController,
-          children: [
-            _buildCreateTemuanTab(),
-            _buildTemuanListTab(),
+          tabs: const [
+            Tab(text: 'Buat Temuan', icon: Icon(Icons.add_circle_outline)),
+            Tab(text: 'Daftar Temuan', icon: Icon(Icons.list_alt)),
           ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildCreateTemuanTab(),
+          _buildTemuanListTab(),
+        ],
       ),
     );
   }
@@ -642,9 +665,15 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
             return SingleChildScrollView(
               controller: scrollController,
               child: Padding(
-                padding: const EdgeInsets.all(AppTheme.spacing20),
+                padding: EdgeInsets.only(
+                  left: AppTheme.spacing20,
+                  right: AppTheme.spacing20,
+                  top: AppTheme.spacing20,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + AppTheme.spacing20,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Header with close button
                     Row(
@@ -662,9 +691,10 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                           ),
                         ),
                         const SizedBox(width: AppTheme.spacing16),
-                        Expanded(
+                        Flexible(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 'Detail Temuan',
@@ -774,7 +804,8 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                     // Action buttons
                     Row(
                       children: [
-                        Expanded(
+                        Flexible(
+                          flex: 1,
                           child: OutlinedButton.icon(
                             onPressed: () {
                               Navigator.pop(context);
@@ -785,7 +816,8 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
                           ),
                         ),
                         const SizedBox(width: AppTheme.spacing12),
-                        Expanded(
+                        Flexible(
+                          flex: 1,
                           child: ElevatedButton.icon(
                             onPressed: () {
                               Navigator.pop(context);
@@ -811,6 +843,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
   Widget _buildDetailSection(String title, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           title,
@@ -821,13 +854,18 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
         ),
         const SizedBox(height: AppTheme.spacing12),
         Container(
+          width: double.infinity,
           padding: const EdgeInsets.all(AppTheme.spacing16),
           decoration: BoxDecoration(
             color: AppTheme.backgroundColor,
             borderRadius: BorderRadius.circular(AppTheme.radius12),
             border: Border.all(color: AppTheme.borderColor),
           ),
-          child: Column(children: children),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: children,
+          ),
         ),
       ],
     );
@@ -850,6 +888,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
             ),
           ),
           const SizedBox(width: AppTheme.spacing12),
+          const Text(': '),
           Expanded(
             child: Text(
               value,
@@ -911,11 +950,13 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
       _showSuccessSnackBar('Temuan berhasil dihapus');
       _loadTemuanData();
     } catch (e) {
-      _showErrorSnackBar('Gagal menghapus temuan');
+      _showErrorSnackBar('Gagal menghapus temuan: ${e.toString()}');
     }
   }
 
   void _navigateToTemuanForm({String? temuanId, String? preselectedCategory}) async {
+    if (!mounted) return;
+    
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -926,7 +967,7 @@ class _TemuanScreenState extends State<TemuanScreen> with TickerProviderStateMix
       ),
     );
 
-    if (result == true) {
+    if (result == true && mounted) {
       _loadTemuanData();
     }
   }

@@ -1147,7 +1147,12 @@ class _HistoryScreenState extends State<HistoryScreen>
             borderRadius: BorderRadius.circular(AppTheme.radius12),
             border: Border.all(color: AppTheme.borderColor),
           ),
-          child: Column(children: children),
+          child: Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: children,
+            ),
+          ),
         ),
       ],
     );

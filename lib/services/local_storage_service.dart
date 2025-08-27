@@ -1,4 +1,5 @@
 // lib/services/local_storage_service.dart - Enhanced with better error handling and loading states
+import 'package:flutter/material.dart';
 import '../model/temuan.dart';
 import '../model/perbaikan.dart';
 import 'database_service.dart';
@@ -78,6 +79,7 @@ class LocalStorageService {
       return temuan;
     } catch (e) {
       print('Error adding temuan: $e');
+      _clearCache(); // Clear cache on error to ensure consistency
       throw Exception('Gagal menambah temuan: ${e.toString()}');
     }
   }
@@ -89,6 +91,7 @@ class LocalStorageService {
       return temuan;
     } catch (e) {
       print('Error updating temuan $id: $e');
+      _clearCache(); // Clear cache on error to ensure consistency
       throw Exception('Gagal memperbarui temuan: ${e.toString()}');
     }
   }
@@ -175,6 +178,7 @@ class LocalStorageService {
       return perbaikan;
     } catch (e) {
       print('Error adding perbaikan: $e');
+      _clearCache(); // Clear cache on error to ensure consistency
       throw Exception('Gagal menambah perbaikan: ${e.toString()}');
     }
   }
@@ -186,6 +190,7 @@ class LocalStorageService {
       return perbaikan;
     } catch (e) {
       print('Error updating perbaikan $id: $e');
+      _clearCache(); // Clear cache on error to ensure consistency
       throw Exception('Gagal memperbarui perbaikan: ${e.toString()}');
     }
   }

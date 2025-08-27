@@ -30,9 +30,9 @@ Future<void> _initializeDatabase() async {
   try {
     final databaseService = DatabaseService();
     await databaseService.database; // This will create/initialize the database
-    print('Database initialized successfully');
+    debugPrint('Database initialized successfully');
   } catch (e) {
-    print('Error initializing database: $e');
+    debugPrint('Error initializing database: $e');
   }
 }
 
@@ -68,12 +68,12 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const TemuanScreen(),
-    const PerbaikanScreen(),
-    const HistoryScreen(),
-    const ReportsScreen(),
+  final List<Widget> _screens = const [
+    HomeScreen(),
+    TemuanScreen(),
+    PerbaikanScreen(),
+    HistoryScreen(),
+    ReportsScreen(),
   ];
 
   @override
@@ -144,7 +144,7 @@ class _MainScreenState extends State<MainScreen> {
                 Container(
                   padding: const EdgeInsets.all(AppTheme.spacing8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(AppTheme.radius8),
                   ),
                   child: const Icon(
@@ -164,7 +164,7 @@ class _MainScreenState extends State<MainScreen> {
                 Text(
                   'Sistem Monitoring Jalan Tol',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                 ),
               ],

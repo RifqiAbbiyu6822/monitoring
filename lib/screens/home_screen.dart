@@ -6,6 +6,7 @@ import '../utils/date_formatter.dart';
 import '../utils/helpers.dart';
 import '../widgets/animated_loading.dart';
 
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -49,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         });
       }
     } catch (e) {
-      print('Error loading dashboard data: $e');
+      debugPrint('Error loading dashboard data: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -153,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               // Quick Actions
               Container(
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
@@ -212,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  color: AppTheme.errorColor.withOpacity(0.1),
+                  color: AppTheme.errorColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(32),
                 ),
                 child: Icon(
@@ -381,7 +382,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -395,7 +396,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: (trend > 0 ? AppTheme.successColor : AppTheme.errorColor).withOpacity(0.1),
+                    color: (trend > 0 ? AppTheme.successColor : AppTheme.errorColor).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -549,7 +550,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -606,7 +607,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         if (activities.isEmpty) 
           _buildEmptyActivities()
         else
-          ...activities.map((activity) => _buildActivityItem(activity)).toList(),
+          ...activities.map((activity) => _buildActivityItem(activity)),
       ],
     );
   }
@@ -625,7 +626,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppTheme.textTertiary.withOpacity(0.1),
+              color: AppTheme.textTertiary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(24),
             ),
             child: Icon(
@@ -656,7 +657,6 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   }
 
   Widget _buildActivityItem(Map<String, dynamic> activity) {
-    final type = activity['type'] as String;
     final status = activity['status'] as String;
     final createdAt = activity['createdAt'] as DateTime;
     final statusColor = AppTheme.getStatusColor(status);
@@ -674,7 +674,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.1),
+            color: statusColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
@@ -717,7 +717,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.1),
+            color: statusColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -798,13 +798,13 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppTheme.primaryColor.withOpacity(0.05),
-                AppTheme.primaryColor.withOpacity(0.02),
+                AppTheme.primaryColor.withValues(alpha: 0.05),
+                AppTheme.primaryColor.withValues(alpha: 0.02),
               ],
             ),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               width: 1,
             ),
           ),
@@ -813,7 +813,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppTheme.infoColor.withOpacity(0.1),
+                  color: AppTheme.infoColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(

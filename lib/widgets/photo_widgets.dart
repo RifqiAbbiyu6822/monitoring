@@ -116,8 +116,8 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: _photos.length >= widget.maxPhotos
-                    ? AppTheme.warningColor.withOpacity(0.1)
-                    : AppTheme.primaryColor.withOpacity(0.1),
+                            ? AppTheme.warningColor.withValues(alpha: 0.1)
+        : AppTheme.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -167,47 +167,50 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget> {
           style: BorderStyle.solid,
         ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.add_photo_alternate,
-            size: 48,
-            color: AppTheme.textTertiary,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Belum ada foto',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppTheme.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Tambahkan foto untuk dokumentasi',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.add_photo_alternate,
+              size: 48,
               color: AppTheme.textTertiary,
             ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: _isLoading ? null : _addPhoto,
-            icon: _isLoading
-                ? SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Theme.of(context).colorScheme.onPrimary,
+            const SizedBox(height: 16),
+            Text(
+              'Belum ada foto',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tambahkan foto untuk dokumentasi',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.textTertiary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _isLoading ? null : _addPhoto,
+              icon: _isLoading
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).colorScheme.onPrimary,
+                        ),
                       ),
-                    ),
-                  )
-                : const Icon(Icons.add_photo_alternate, size: 18),
-            label: const Text('Tambah Foto'),
-          ),
-        ],
+                    )
+                  : const Icon(Icons.add_photo_alternate, size: 18),
+              label: const Text('Tambah Foto'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -293,10 +296,10 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withOpacity(0.5),
+            Colors.black.withValues(alpha: 0.5),
             Colors.transparent,
             Colors.transparent,
-            Colors.black.withOpacity(0.7),
+            Colors.black.withValues(alpha: 0.7),
           ],
         ),
       ),
@@ -309,7 +312,7 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.8),
+                color: Colors.black.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -331,7 +334,7 @@ class _PhotoPickerWidgetState extends State<PhotoPickerWidget> {
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: AppTheme.errorColor.withOpacity(0.9),
+                  color: AppTheme.errorColor.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Icon(
@@ -416,9 +419,10 @@ class PhotoViewerWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppTheme.borderColor),
         ),
-        child: Center(
+        child: SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.photo_library_outlined,
@@ -438,32 +442,34 @@ class PhotoViewerWidget extends StatelessWidget {
       );
     }
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-        childAspectRatio: 1.0,
+    return Flexible(
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: 1.0,
+        ),
+        itemCount: photos.length,
+        itemBuilder: (context, index) {
+          final photoPath = photos[index];
+          return GestureDetector(
+            onTap: () => _viewPhoto(context, photoPath),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.borderColor),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: _buildImage(photoPath),
+              ),
+            ),
+          );
+        },
       ),
-      itemCount: photos.length,
-      itemBuilder: (context, index) {
-        final photoPath = photos[index];
-        return GestureDetector(
-          onTap: () => _viewPhoto(context, photoPath),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: _buildImage(photoPath),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -539,9 +545,10 @@ class ProgressPhotoViewerWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppTheme.borderColor),
         ),
-        child: Center(
+        child: SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.photo_library_outlined,
@@ -562,6 +569,7 @@ class ProgressPhotoViewerWidget extends StatelessWidget {
     }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
@@ -587,59 +595,61 @@ class ProgressPhotoViewerWidget extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: 1.0,
-          ),
-          itemCount: photos.length,
-          itemBuilder: (context, index) {
-            final photoPath = photos[index];
-            return GestureDetector(
-              onTap: () => _viewPhoto(context, photoPath, index),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.borderColor),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      _buildImage(photoPath),
-                      Positioned(
-                        bottom: 4,
-                        left: 4,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '${index + 1}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
+        Flexible(
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 1.0,
+            ),
+            itemCount: photos.length,
+            itemBuilder: (context, index) {
+              final photoPath = photos[index];
+              return GestureDetector(
+                onTap: () => _viewPhoto(context, photoPath, index),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.borderColor),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _buildImage(photoPath),
+                        Positioned(
+                          bottom: 4,
+                          left: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.8),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '${index + 1}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ],
     );
